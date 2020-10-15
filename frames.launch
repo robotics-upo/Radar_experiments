@@ -7,6 +7,7 @@
     <arg name="3pi/4" value="2.355"/>
     
     <node pkg="tf2_ros" type="static_transform_publisher" name="os1_sensor_broadcaster"         args="0.1 0 0.40 0 0 0 base_link os1_sensor"/>
+    <node pkg="tf2_ros" type="static_transform_publisher" name="radar"                          args="0.10 0 -0.1 0 0 0 os1_sensor ti_mmwave"/>
     <node pkg="tf2_ros" type="static_transform_publisher" name="raposa_marker_broadcaster"      args="0 0 0.2 0 0 0 base_link raposa_marker"/>
     <node pkg="tf2_ros" type="static_transform_publisher" name="front_cam_broadcaster"          args="0.12 -0.05 -0.05 0.1 0 0 os1_sensor front_cam_link"/>
     <node pkg="tf2_ros" type="static_transform_publisher" name="rear_cam_broadcaster"           args="-0.12 0.05 -0.05 $(arg pi) 0 0  os1_sensor rear_cam_link"/>

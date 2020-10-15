@@ -1,7 +1,8 @@
 <launch>
     <!-- Bag file args -->
-    <arg name="bag_file" default="$(dirname)/mapping_aruco_full1.bag"/>
-    <arg name="rate" default="1"/>
+    <arg name="bag_file" default="$(dirname)/mapping_aruco_full1_notf.bag"/>
+    <arg name="rate" default="0.2"/>
+    <param name="use_sim_time" value="true"/>
     <!-- MCL Args -->
     <arg name="use_mcl_localization" default="true"/>
     <arg name="mcl_map_path" default="$(dirname)/aruco.bt"/>
@@ -17,6 +18,7 @@
     <arg name="fiducial_len" default="0.188"/>
     <arg name="fiducial_len_override" default="1-6:0.04"/>
     <arg name="ignore_fid" default=""/>
+    <arg name="detect_aruco_back" default="true"/>
     <!-- SLAM Parameters -->
     <arg name="fid_slam" default="true"/>
     <arg name="read_only_map" default="false"/>
@@ -25,7 +27,7 @@
     <arg name="base_frame" default="base_link"/>
     <!-- Static TF -->
     <include file="$(dirname)/frames.launch"/>
-    
+
     <!-- Uncompress Front and Back RGB Images -->
     <node pkg="image_transport" type="republish" name="front_repub" args="compressed in:=/$(arg camera_1)/image_flipped raw out:=/$(arg camera_1)/image_flipped"/>
 
@@ -45,7 +47,7 @@
     </include>
 
     <!-- Aruco detect for back camera -->
-    <include file="$(find nix_launchers)/launch/sensors/aruco/aruco_detect.launch">
+    <include file="$(find nix_launchers)/launch/sensors/aruco/aruco_detect.launch" if="$(arg detect_aruco_back)">
         <arg name="camera" value="$(arg camera_2)"/>
         <arg name="image" value="image_flipped"/>
         <arg name="transport" value="raw"/>
@@ -53,7 +55,7 @@
         <arg name="fiducial_len" value="$(arg fiducial_len)"/>
         <arg name="fiducial_len_override" value="$(arg fiducial_len_override)"/>
         <arg name="ignore_fiducials" value="$(arg ignore_fid)"/>
-    </include>
+    </include> 
 
     <!-- Odom to tf, to use with MCL -->
     <node pkg="odom_to_tf" type="odom_to_tf.py" name="odom_to_tf" if="$(arg use_mcl_localization)">
