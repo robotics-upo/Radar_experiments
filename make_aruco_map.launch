@@ -1,0 +1,118 @@
+<launch>
+    <!-- Bag file args -->
+    <arg name="bag_file" default="$(dirname)/mapping_aruco_full1.bag"/>
+    <arg name="rate" default="1"/>
+    <!-- MCL Args -->
+    <arg name="use_mcl_localization" default="true"/>
+    <arg name="mcl_map_path" default="$(dirname)/aruco.bt"/>
+    <arg name="initial_x" default="6.2"/>
+    <arg name="initial_y" default="12.1"/>
+    <arg name="initial_z" default="0.1"/>
+    <arg name="initial_a" default="-1.59"/>
+    <arg name="use_imu" default="false"/>
+    <!-- ARUCO Detect Args -->
+    <arg name="camera_1" default="usb_cam_front" />
+    <arg name="camera_2" default="usb_cam_back" />
+    <arg name="dictionary" default="16"/>
+    <arg name="fiducial_len" default="0.188"/>
+    <arg name="fiducial_len_override" default="1-6:0.04"/>
+    <arg name="ignore_fid" default=""/>
+    <!-- SLAM Parameters -->
+    <arg name="fid_slam" default="true"/>
+    <arg name="read_only_map" default="false"/>
+    <arg name="map_frame" default="map"/>
+    <arg name="odom_frame" default="odom"/>
+    <arg name="base_frame" default="base_link"/>
+    <!-- Static TF -->
+    <include file="$(dirname)/frames.launch"/>
+    
+    <!-- Uncompress Front and Back RGB Images -->
+    <node pkg="image_transport" type="republish" name="front_repub" args="compressed in:=/$(arg camera_1)/image_flipped raw out:=/$(arg camera_1)/image_flipped"/>
+
+    <node pkg="image_transport" type="republish" name="back_repub" args="compressed in:=/$(arg camera_2)/image_flipped raw out:=/$(arg camera_2)/image_flipped"/>
+    <!-- BAG Player -->
+    <node pkg="rosbag" type="play" name="play" args="$(arg bag_file) --clock --pause --rate $(arg rate)"/>
+
+    <!-- Aruco detect for front camera -->
+    <include file="$(find nix_launchers)/launch/sensors/aruco/aruco_detect.launch">
+        <arg name="camera" value="$(arg camera_1)"/>
+        <arg name="image" value="image_flipped"/>
+        <arg name="transport" value="raw"/>
+        <arg name="dictionary" value="$(arg dictionary)"/>
+        <arg name="fiducial_len" value="$(arg fiducial_len)"/>
+        <arg name="fiducial_len_override" value="$(arg fiducial_len_override)"/>
+        <arg name="ignore_fiducials" value="$(arg ignore_fid)"/>
+    </include>
+
+    <!-- Aruco detect for back camera -->
+    <include file="$(find nix_launchers)/launch/sensors/aruco/aruco_detect.launch">
+        <arg name="camera" value="$(arg camera_2)"/>
+        <arg name="image" value="image_flipped"/>
+        <arg name="transport" value="raw"/>
+        <arg name="dictionary" value="$(arg dictionary)"/>
+        <arg name="fiducial_len" value="$(arg fiducial_len)"/>
+        <arg name="fiducial_len_override" value="$(arg fiducial_len_override)"/>
+        <arg name="ignore_fiducials" value="$(arg ignore_fid)"/>
+    </include>
+
+    <!-- Odom to tf, to use with MCL -->
+    <node pkg="odom_to_tf" type="odom_to_tf.py" name="odom_to_tf" if="$(arg use_mcl_localization)">
+        <param name="laser_frame" value="base_link"/>
+        <param name="rotate_90" value="false"/>
+    </node>
+
+    <!-- MCL 3D -->
+    <node name="mcl3d_node" type="mcl3d_node" pkg="mcl3d" if="$(arg use_mcl_localization)">
+        <remap from="/mcl3d_node/initial_pose" to="/initialpose"/>
+        <param name="use_imu" value="$(arg use_imu)"/>
+
+        <param name="rate" value="10.0" />
+        <param name="in_cloud" value="/os1_cloud_node/points_non_dense" />
+        <param name="base_frame_id" value="$(arg base_frame)" />
+        <param name="odom_frame_id" value="$(arg odom_frame)" />
+        <param name="global_frame_id" value="$(arg map_frame)" />
+
+        <param name="map_path" value="$(arg mcl_map_path)" />
+        <param name="publish_point_cloud" value="true" />
+        <param name="sensor_dev" value="0.01" />
+        <param name="cloud_voxel_size" value="0.05"/>
+        <param name="publish_grid_slice" value="0.0"/>
+
+        <param name="min_particles" value="600" />
+        <param name="max_particles" value="800" />
+
+        <param name="odom_x_mod" value="0.2" />
+        <param name="odom_y_mod" value="0.2" />
+        <param name="odom_z_mod" value="0.2" />
+        <param name="odom_a_mod" value="0.2" />
+
+        <param name="resample_interval" value="1" />
+
+        <param name="update_min_d" value="0.2" />
+        <param name="update_min_a" value="0.1" />
+
+        <param name="initial_x" value="$(arg initial_x)"/>
+        <param name="initial_y" value="$(arg initial_y)"/>
+        <param name="initial_z" value="$(arg initial_z)"/>
+        <param name="initial_a" value="$(arg initial_a)"/>
+
+        <param name="initial_x_dev" value="0.2" />
+        <param name="initial_y_dev" value="0.2" />
+        <param name="initial_z_dev" value="0.2" />
+        <param name="initial_a_dev" value="0.2" />
+        <param name="initial_z_offset" value="0" />
+
+    </node>
+
+    <include file="$(find fiducial_slam)/launch/fiducial_slam.launch" if="$(arg fid_slam)">
+        <arg name="publish_tf" value="false"/>
+        <arg name="odom_frame" value="$(arg odom_frame)"/>
+        <arg name="map_frame" value="$(arg map_frame)"/>
+        <arg name="base_frame" value="$(arg base_frame)"/>
+        <arg name="fiducial_len" value="$(arg fiducial_len)"/>
+        <arg name="use_external_loc" value="true"/>
+        <arg name="read_only_map" value="$(arg read_only_map)"/>
+    </include>
+
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(dirname)/aruco.rviz"/>
+</launch>
