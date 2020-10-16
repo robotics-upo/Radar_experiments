@@ -1,8 +1,11 @@
 <launch>
-    <!-- Bag file args -->
-    <arg name="bag_file" default="$(dirname)/mapping_aruco_full1_notf.bag"/>
-    <arg name="rate" default="0.2"/>
     <param name="use_sim_time" value="true"/>
+
+    <!-- Bag file args -->
+    <arg name="bag_file" default="$(dirname)/2020-10-15-16-57-06.bag"/>
+    <arg name="rate" default="0.2"/>
+    <arg name="use_bag_tf" default="false"/>    
+
     <!-- MCL Args -->
     <arg name="use_mcl_localization" default="true"/>
     <arg name="mcl_map_path" default="$(dirname)/aruco.bt"/>
@@ -33,7 +36,11 @@
 
     <node pkg="image_transport" type="republish" name="back_repub" args="compressed in:=/$(arg camera_2)/image_flipped raw out:=/$(arg camera_2)/image_flipped"/>
     <!-- BAG Player -->
-    <node pkg="rosbag" type="play" name="play" args="$(arg bag_file) --clock --pause --rate $(arg rate)"/>
+        <!-- Without the own tf of the bag -->
+    <node pkg="rosbag" type="play" name="play" args="$(arg bag_file) --clock --pause --rate $(arg rate)">
+        <remap from="/tf" to="/not_used_tf" unless="$(arg use_bag_tf)"/>
+        <remap from="/tf_static" to="/tf_static_not_used" unless="$(arg use_bag_tf)"/>
+    </node>
 
     <!-- Aruco detect for front camera -->
     <include file="$(find nix_launchers)/launch/sensors/aruco/aruco_detect.launch">
