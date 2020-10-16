@@ -4,7 +4,7 @@
     <!-- Bag file args -->
     <arg name="bag_file" default="$(dirname)/2020-10-15-16-57-06.bag"/>
     <arg name="rate" default="0.2"/>
-    <arg name="use_bag_tf" default="false"/>    
+    <arg name="use_bag_tf" default="false"/>
 
     <!-- MCL Args -->
     <arg name="use_mcl_localization" default="true"/>
@@ -20,8 +20,12 @@
     <arg name="dictionary" default="16"/>
     <arg name="fiducial_len" default="0.188"/>
     <arg name="fiducial_len_override" default="1-6:0.04"/>
-    <arg name="ignore_fid" default=""/>
+    <arg name="ignore_fiducials" default=""/>
     <arg name="detect_aruco_back" default="true"/>
+    <arg name="transport" default="compressed"/>
+    <arg name="image" default="image"/>
+    <arg name="do_pose_estimation" default="true"/>
+
     <!-- SLAM Parameters -->
     <arg name="fid_slam" default="true"/>
     <arg name="read_only_map" default="false"/>
@@ -36,33 +40,41 @@
 
     <node pkg="image_transport" type="republish" name="back_repub" args="compressed in:=/$(arg camera_2)/image_flipped raw out:=/$(arg camera_2)/image_flipped"/>
     <!-- BAG Player -->
-        <!-- Without the own tf of the bag -->
+    <!-- Without the own tf of the bag -->
     <node pkg="rosbag" type="play" name="play" args="$(arg bag_file) --clock --pause --rate $(arg rate)">
         <remap from="/tf" to="/not_used_tf" unless="$(arg use_bag_tf)"/>
         <remap from="/tf_static" to="/tf_static_not_used" unless="$(arg use_bag_tf)"/>
     </node>
 
     <!-- Aruco detect for front camera -->
-    <include file="$(find nix_launchers)/launch/sensors/aruco/aruco_detect.launch">
-        <arg name="camera" value="$(arg camera_1)"/>
-        <arg name="image" value="image_flipped"/>
-        <arg name="transport" value="raw"/>
-        <arg name="dictionary" value="$(arg dictionary)"/>
-        <arg name="fiducial_len" value="$(arg fiducial_len)"/>
-        <arg name="fiducial_len_override" value="$(arg fiducial_len_override)"/>
-        <arg name="ignore_fiducials" value="$(arg ignore_fid)"/>
-    </include>
 
-    <!-- Aruco detect for back camera -->
-    <include file="$(find nix_launchers)/launch/sensors/aruco/aruco_detect.launch" if="$(arg detect_aruco_back)">
-        <arg name="camera" value="$(arg camera_2)"/>
-        <arg name="image" value="image_flipped"/>
-        <arg name="transport" value="raw"/>
-        <arg name="dictionary" value="$(arg dictionary)"/>
-        <arg name="fiducial_len" value="$(arg fiducial_len)"/>
-        <arg name="fiducial_len_override" value="$(arg fiducial_len_override)"/>
-        <arg name="ignore_fiducials" value="$(arg ignore_fid)"/>
-    </include> 
+    <node pkg="aruco_detect" name="aruco_detect_$(arg camera_1)" type="aruco_detect" respawn="false">
+        <param name="image_transport" value="$(arg transport)"/>
+        <param name="publish_images" value="true" />
+        <param name="fiducial_len" value="$(arg fiducial_len)"/>
+        <param name="dictionary" value="$(arg dictionary)"/>
+        <param name="do_pose_estimation" value="$(arg do_pose_estimation)"/>
+        <param name="ignore_fiducials" value="$(arg ignore_fiducials)"/>
+        <param name="fiducial_len_override" value="$(arg fiducial_len_override)"/>
+        <remap from="/camera" to="$(arg camera_1)/$(arg image)"/>
+        <remap from="/camera/compressed" to="$(arg camera_1)/$(arg image)/compressed"/>
+        <remap from="/camera_info" to="$(arg camera_1)/camera_info"/>
+        <remap from="/fiducial_images" to="$(arg camera_1)/fiducial_images"/>
+    </node>
+
+    <node pkg="aruco_detect" name="aruco_detect_$(arg camera_2)" type="aruco_detect" respawn="false" if="$(arg detect_aruco_back)">
+        <param name="image_transport" value="$(arg transport)"/>
+        <param name="publish_images" value="true" />
+        <param name="fiducial_len" value="$(arg fiducial_len)"/>
+        <param name="dictionary" value="$(arg dictionary)"/>
+        <param name="do_pose_estimation" value="$(arg do_pose_estimation)"/>
+        <param name="ignore_fiducials" value="$(arg ignore_fiducials)"/>
+        <param name="fiducial_len_override" value="$(arg fiducial_len_override)"/>
+        <remap from="/camera" to="$(arg camera_2)/$(arg image)"/>
+        <remap from="/camera/compressed" to="$(arg camera_2)/$(arg image)/compressed"/>
+        <remap from="/camera_info" to="$(arg camera_2)/camera_info"/>
+        <remap from="/fiducial_images" to="$(arg camera_2)/fiducial_images"/>
+    </node>
 
     <!-- Odom to tf, to use with MCL -->
     <node pkg="odom_to_tf" type="odom_to_tf.py" name="odom_to_tf" if="$(arg use_mcl_localization)">
