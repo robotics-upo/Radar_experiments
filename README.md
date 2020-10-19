@@ -8,3 +8,7 @@ To download bag files to use with these launch files go to the dropbox folder:
 By **default** the launch ```make_aruco_map.launch``` is configured to avoid using the /tf and /tf_static topics in the case they are present on the bag file. So if you need to use these topics because some reasons, just run the launch file with the arg *use_bag_tf* set to true.
 
 Of course, to use this launch you will need to download some ROS Packages such as [MCL3D](https://github.com/robotics-upo/mcl3d/) [Fiducials](https://github.com/robotics-upo/fiducials) and [Odom To Tf](https://github.com/robotics-upo/odom_to_tf). Just follow the instructions on every package, clone them into your catkin workspace an compile.
+
+## Localize your robot
+
+The launch file come with a default position in the attached map, but it happens that some bags are recorded from a different start position, so you will need to initially localize them, using "P" key in the RViz window.
