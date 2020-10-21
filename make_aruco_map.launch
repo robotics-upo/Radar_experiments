@@ -2,7 +2,7 @@
     <param name="use_sim_time" value="true"/>
 
     <!-- Bag file args -->
-    <arg name="bag_file" default="$(dirname)/2020-10-15-16-57-06.bag"/>
+    <arg name="bag_file" default="$(dirname)/multi_radar/multi_radar_fov30_2.bag"/>
     <arg name="rate" default="0.2"/>
     <arg name="use_bag_tf" default="false"/>
 
@@ -23,7 +23,7 @@
     <arg name="ignore_fiducials" default=""/>
     <arg name="detect_aruco_back" default="true"/>
     <arg name="transport" default="compressed"/>
-    <arg name="image" default="image"/>
+    <arg name="image" default="image_flipped"/>
     <arg name="do_pose_estimation" default="true"/>
 
     <!-- SLAM Parameters -->
