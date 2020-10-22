@@ -18,12 +18,12 @@
     <arg name="camera_1" default="usb_cam_front" />
     <arg name="camera_2" default="usb_cam_back" />
     <arg name="dictionary" default="16"/>
-    <arg name="fiducial_len" default="0.188"/>
+    <arg name="fiducial_len" default="0.2"/>
     <arg name="fiducial_len_override" default="1-6:0.04"/>
     <arg name="ignore_fiducials" default=""/>
     <arg name="detect_aruco_back" default="true"/>
     <arg name="transport" default="compressed"/>
-    <arg name="image" default="image"/>
+    <arg name="image" default="image_flipped"/>
     <arg name="do_pose_estimation" default="true"/>
 
     <!-- SLAM Parameters -->
