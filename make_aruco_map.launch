@@ -18,13 +18,14 @@
     <arg name="camera_1" default="usb_cam_front" />
     <arg name="camera_2" default="usb_cam_back" />
     <arg name="dictionary" default="16"/>
-    <arg name="fiducial_len" default="0.2"/>
+    <arg name="fiducial_len" default="0.18"/>
     <arg name="fiducial_len_override" default="1-6:0.04"/>
     <arg name="ignore_fiducials" default=""/>
     <arg name="detect_aruco_back" default="true"/>
     <arg name="transport" default="compressed"/>
     <arg name="image" default="image_flipped"/>
     <arg name="do_pose_estimation" default="true"/>
+    <arg name="aloam_odom" default="true"/>
 
     <!-- SLAM Parameters -->
     <arg name="fid_slam" default="true"/>
@@ -77,13 +78,17 @@
     </node>
 
     <!-- Odom to tf, to use with MCL -->
-    <node pkg="odom_to_tf" type="odom_to_tf.py" name="odom_to_tf" if="$(arg use_mcl_localization)">
+    <node pkg="odom_to_tf" type="odom_to_tf.py" name="odom_to_tf" unless="$(arg aloam_odom)">
         <param name="laser_frame" value="base_link"/>
         <param name="rotate_90" value="false"/>
     </node>
 
+    <include file="$(find nix_launchers)/launch/aloam.launch">
+        <arg name="only_odometry" value="true"/>
+    </include>
+
     <!-- MCL 3D -->
-    <node name="mcl3d_node" type="mcl3d_node" pkg="mcl3d" if="$(arg use_mcl_localization)">
+    <node name="mcl3d_node" type="mcl3d_node" pkg="mcl3d"> <!-- if="$(arg use_mcl_localization)">-->
         <remap from="/mcl3d_node/initial_pose" to="/initialpose"/>
         <param name="use_imu" value="$(arg use_imu)"/>
 
@@ -92,10 +97,11 @@
         <param name="base_frame_id" value="$(arg base_frame)" />
         <param name="odom_frame_id" value="$(arg odom_frame)" />
         <param name="global_frame_id" value="$(arg map_frame)" />
+        <!-- <param name="global_frame_id" value="/mapi" /> -->
 
         <param name="map_path" value="$(arg mcl_map_path)" />
         <param name="publish_point_cloud" value="true" />
-        <param name="sensor_dev" value="0.01" />
+        <param name="sensor_dev" value="0.005" />
         <param name="cloud_voxel_size" value="0.05"/>
         <param name="publish_grid_slice" value="0.0"/>
 
@@ -126,13 +132,16 @@
     </node>
 
     <include file="$(find fiducial_slam)/launch/fiducial_slam.launch" if="$(arg fid_slam)">
-        <arg name="publish_tf" value="false"/>
+        <arg name="publish_tf" value="$(eval not(arg('use_mcl_localization')))"/>
         <arg name="odom_frame" value="$(arg odom_frame)"/>
         <arg name="map_frame" value="$(arg map_frame)"/>
         <arg name="base_frame" value="$(arg base_frame)"/>
         <arg name="fiducial_len" value="$(arg fiducial_len)"/>
-        <arg name="use_external_loc" value="true"/>
+        <arg name="use_external_loc" value="$(arg use_mcl_localization)"/>
         <arg name="read_only_map" value="$(arg read_only_map)"/>
+        <arg name="systematic_error" value="0.1"/>
+        <arg name="covariance_diagonal" value="[1.0, 1.0, 1.0, 0.2, 0.2, 0.2]"/>
+        <arg name="weighting_scale" value="1"/>
     </include>
 
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(dirname)/aruco.rviz"/>
