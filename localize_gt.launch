@@ -1,0 +1,19 @@
+<launch>
+    <param name="use_sim_time" value="true"/>
+
+    <!-- Bag file args -->
+    <arg name="bag_name" default="multi_radar_fov30_2.bag"/>
+    <arg name="bag_file" default="$(dirname)/bags/$(arg bag_name)"/>
+    <arg name="rate" default="0.6"/>
+    
+
+    <include file="$(dirname)/make_aruco_map.launch">
+        <arg name="bag_file" value="$(arg bag_file)"/>
+        <arg name="rate" value="$(arg rate)"/>
+        <arg name="use_bag_tf" value="false"/>
+        <arg name="read_only_map" value="true"/>
+        <arg name="use_mcl_localization" value="false"/>
+        <arg name="aloam_odom" value="false"/>
+    </include>
+    
+</launch>
