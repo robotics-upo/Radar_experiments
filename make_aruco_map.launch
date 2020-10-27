@@ -3,7 +3,7 @@
 
     <!-- Bag file args -->
     <arg name="bag_file" default="$(dirname)/multi_radar/multi_radar_fov30_2.bag"/>
-    <arg name="rate" default="0.2"/>
+    <arg name="rate" default="0.5"/>
     <arg name="use_bag_tf" default="false"/>
 
     <!-- MCL Args -->
@@ -47,6 +47,8 @@
         <remap from="/tf_static" to="/tf_static_not_used" unless="$(arg use_bag_tf)"/>
     </node>
 
+    <include file="$(find cloud_concatenator)/launch/concatenator.launch"/>
+
     <!-- Aruco detect for front camera -->
 
     <node pkg="aruco_detect" name="aruco_detect_$(arg camera_1)" type="aruco_detect" respawn="false">
@@ -88,7 +90,7 @@
     </include>
 
     <!-- MCL 3D -->
-    <node name="mcl3d_node" type="mcl3d_node" pkg="mcl3d"> <!-- if="$(arg use_mcl_localization)">-->
+    <node name="mcl3d_node" type="mcl3d_node" pkg="mcl3d" output="screen"> <!-- if="$(arg use_mcl_localization)">-->
         <remap from="/mcl3d_node/initial_pose" to="/initialpose"/>
         <param name="use_imu" value="$(arg use_imu)"/>
 
