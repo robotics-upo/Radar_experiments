@@ -7,6 +7,8 @@ Panels:
         - /PoseWithCovariance1
         - /PoseWithCovariance2
         - /PoseArray1
+        - /Map1
+        - /PointCloud21
       Splitter Ratio: 0.46201232075691223
     Tree Height: 755
   - Class: rviz/Selection
@@ -60,41 +62,15 @@ Visualization Manager:
         All Enabled: true
         base_link:
           Value: true
-        fiducial_1:
-          Value: true
-        fiducial_10:
-          Value: true
-        fiducial_23:
-          Value: true
-        fiducial_29:
-          Value: true
-        fiducial_401:
-          Value: true
-        fiducial_402:
-          Value: true
-        fiducial_403:
-          Value: true
-        fiducial_404:
-          Value: true
-        fiducial_405:
+        fiducial_1002:
           Value: true
         fiducial_406:
           Value: true
-        fiducial_407:
-          Value: true
         fiducial_408:
-          Value: true
-        fiducial_409:
-          Value: true
-        fiducial_410:
-          Value: true
-        fiducial_411:
           Value: true
         fiducial_412:
           Value: true
         fiducial_413:
-          Value: true
-        fiducial_414:
           Value: true
         fiducial_415:
           Value: true
@@ -108,11 +84,7 @@ Visualization Manager:
           Value: true
         fiducial_422:
           Value: true
-        fiducial_423:
-          Value: true
         fiducial_424:
-          Value: true
-        fiducial_425:
           Value: true
         fiducial_426:
           Value: true
@@ -126,41 +98,21 @@ Visualization Manager:
           Value: true
         fiducial_431:
           Value: true
-        fiducial_432:
-          Value: true
-        fiducial_433:
-          Value: true
-        fiducial_434:
-          Value: true
         fiducial_435:
-          Value: true
-        fiducial_436:
           Value: true
         fiducial_437:
           Value: true
         fiducial_438:
           Value: true
-        fiducial_439:
-          Value: true
         fiducial_440:
           Value: true
         fiducial_441:
           Value: true
-        fiducial_442:
-          Value: true
-        fiducial_443:
-          Value: true
         fiducial_444:
-          Value: true
-        fiducial_445:
-          Value: true
-        fiducial_446:
-          Value: true
-        fiducial_447:
           Value: true
         fiducial_448:
           Value: true
-        fiducial_450:
+        fiducial_449:
           Value: true
         fiducial_451:
           Value: true
@@ -168,63 +120,21 @@ Visualization Manager:
           Value: true
         fiducial_453:
           Value: true
-        fiducial_454:
-          Value: true
-        fiducial_455:
-          Value: true
-        fiducial_456:
-          Value: true
         fiducial_457:
-          Value: true
-        fiducial_458:
-          Value: true
-        fiducial_459:
           Value: true
         fiducial_460:
           Value: true
-        fiducial_461:
-          Value: true
-        fiducial_462:
-          Value: true
         fiducial_463:
-          Value: true
-        fiducial_464:
-          Value: true
-        fiducial_465:
-          Value: true
-        fiducial_466:
           Value: true
         fiducial_467:
           Value: true
         fiducial_468:
           Value: true
-        fiducial_469:
-          Value: true
-        fiducial_470:
-          Value: true
-        fiducial_471:
-          Value: true
         fiducial_472:
-          Value: true
-        fiducial_473:
-          Value: true
-        fiducial_474:
-          Value: true
-        fiducial_475:
-          Value: true
-        fiducial_476:
           Value: true
         fiducial_478:
           Value: true
-        fiducial_479:
-          Value: true
-        fiducial_480:
-          Value: true
-        fiducial_481:
-          Value: true
         fiducial_482:
-          Value: true
-        fiducial_483:
           Value: true
         fiducial_484:
           Value: true
@@ -254,17 +164,7 @@ Visualization Manager:
           Value: true
         fiducial_497:
           Value: true
-        fiducial_498:
-          Value: true
-        fiducial_499:
-          Value: true
-        fiducial_5:
-          Value: true
         fiducial_500:
-          Value: true
-        fiducial_7:
-          Value: true
-        fiducial_832:
           Value: true
         front_cam_link:
           Value: true
@@ -314,171 +214,13 @@ Visualization Manager:
               os1_sensor:
                 front_cam_link:
                   usb_cam_front:
-                    fiducial_1:
-                      {}
-                    fiducial_10:
-                      {}
-                    fiducial_23:
-                      {}
-                    fiducial_401:
-                      {}
-                    fiducial_402:
-                      {}
-                    fiducial_403:
-                      {}
-                    fiducial_404:
-                      {}
-                    fiducial_405:
-                      {}
-                    fiducial_409:
-                      {}
-                    fiducial_410:
-                      {}
-                    fiducial_411:
-                      {}
-                    fiducial_413:
-                      {}
-                    fiducial_414:
-                      {}
-                    fiducial_415:
-                      {}
-                    fiducial_423:
-                      {}
-                    fiducial_424:
-                      {}
-                    fiducial_425:
-                      {}
-                    fiducial_426:
-                      {}
-                    fiducial_427:
-                      {}
-                    fiducial_429:
-                      {}
-                    fiducial_430:
-                      {}
-                    fiducial_431:
-                      {}
-                    fiducial_433:
-                      {}
-                    fiducial_434:
-                      {}
-                    fiducial_440:
-                      {}
-                    fiducial_442:
-                      {}
-                    fiducial_443:
-                      {}
-                    fiducial_445:
-                      {}
-                    fiducial_446:
-                      {}
-                    fiducial_447:
-                      {}
-                    fiducial_450:
-                      {}
-                    fiducial_451:
-                      {}
-                    fiducial_452:
-                      {}
-                    fiducial_453:
-                      {}
-                    fiducial_454:
-                      {}
-                    fiducial_455:
-                      {}
-                    fiducial_456:
-                      {}
-                    fiducial_457:
-                      {}
-                    fiducial_458:
-                      {}
-                    fiducial_459:
-                      {}
-                    fiducial_460:
-                      {}
-                    fiducial_461:
-                      {}
-                    fiducial_462:
-                      {}
-                    fiducial_463:
-                      {}
-                    fiducial_464:
-                      {}
-                    fiducial_465:
-                      {}
-                    fiducial_466:
-                      {}
-                    fiducial_467:
-                      {}
-                    fiducial_468:
-                      {}
-                    fiducial_469:
-                      {}
-                    fiducial_470:
-                      {}
-                    fiducial_471:
-                      {}
-                    fiducial_472:
-                      {}
-                    fiducial_473:
-                      {}
-                    fiducial_474:
-                      {}
-                    fiducial_475:
-                      {}
-                    fiducial_476:
-                      {}
-                    fiducial_478:
-                      {}
-                    fiducial_479:
-                      {}
-                    fiducial_480:
-                      {}
-                    fiducial_481:
-                      {}
-                    fiducial_482:
-                      {}
-                    fiducial_483:
-                      {}
-                    fiducial_485:
-                      {}
-                    fiducial_487:
-                      {}
-                    fiducial_488:
-                      {}
-                    fiducial_491:
-                      {}
-                    fiducial_492:
-                      {}
-                    fiducial_497:
-                      {}
-                    fiducial_498:
-                      {}
-                    fiducial_499:
-                      {}
-                    fiducial_5:
-                      {}
-                    fiducial_500:
-                      {}
-                    fiducial_7:
-                      {}
-                    fiducial_832:
-                      {}
-                os1_imu:
-                  {}
-                os1_lidar:
-                  {}
-                rear_cam_link:
-                  usb_cam_back:
-                    fiducial_29:
-                      {}
                     fiducial_406:
-                      {}
-                    fiducial_407:
                       {}
                     fiducial_408:
                       {}
                     fiducial_412:
+                      {}
+                    fiducial_415:
                       {}
                     fiducial_416:
                       {}
@@ -490,19 +232,17 @@ Visualization Manager:
                       {}
                     fiducial_422:
                       {}
+                    fiducial_427:
+                      {}
                     fiducial_428:
                       {}
-                    fiducial_432:
+                    fiducial_431:
                       {}
                     fiducial_435:
-                      {}
-                    fiducial_436:
                       {}
                     fiducial_437:
                       {}
                     fiducial_438:
-                      {}
-                    fiducial_439:
                       {}
                     fiducial_441:
                       {}
@@ -510,11 +250,37 @@ Visualization Manager:
                       {}
                     fiducial_448:
                       {}
+                    fiducial_449:
+                      {}
+                    fiducial_451:
+                      {}
+                    fiducial_457:
+                      {}
+                    fiducial_460:
+                      {}
+                    fiducial_463:
+                      {}
+                    fiducial_467:
+                      {}
+                    fiducial_468:
+                      {}
+                    fiducial_478:
+                      {}
+                    fiducial_482:
+                      {}
                     fiducial_484:
+                      {}
+                    fiducial_485:
                       {}
                     fiducial_486:
                       {}
                     fiducial_489:
+                      {}
+                    fiducial_490:
+                      {}
+                    fiducial_491:
+                      {}
+                    fiducial_492:
                       {}
                     fiducial_493:
                       {}
@@ -523,6 +289,38 @@ Visualization Manager:
                     fiducial_495:
                       {}
                     fiducial_496:
+                      {}
+                    fiducial_497:
+                      {}
+                os1_imu:
+                  {}
+                os1_lidar:
+                  {}
+                rear_cam_link:
+                  usb_cam_back:
+                    fiducial_413:
+                      {}
+                    fiducial_424:
+                      {}
+                    fiducial_426:
+                      {}
+                    fiducial_429:
+                      {}
+                    fiducial_430:
+                      {}
+                    fiducial_440:
+                      {}
+                    fiducial_452:
+                      {}
+                    fiducial_453:
+                      {}
+                    fiducial_472:
+                      {}
+                    fiducial_487:
+                      {}
+                    fiducial_488:
+                      {}
+                    fiducial_500:
                       {}
                 ti_mmwave_pcl_front_radar:
                   ti_mmwave_front_radar:
@@ -647,12 +445,12 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 22.299999237060547
+      Max Intensity: 25.100000381469727
       Min Color: 0; 0; 0
-      Min Intensity: 22.299999237060547
+      Min Intensity: 16.5
       Name: Front Radar
       Position Transformer: XYZ
       Queue Size: 10
@@ -664,7 +462,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -677,12 +475,12 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 19
+      Max Intensity: 18.700000762939453
       Min Color: 0; 0; 0
-      Min Intensity: 15.5
+      Min Intensity: 16.899999618530273
       Name: Rear Radar
       Position Transformer: XYZ
       Queue Size: 10
@@ -694,7 +492,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -707,12 +505,12 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 24.5
+      Max Intensity: 30.399999618530273
       Min Color: 0; 0; 0
-      Min Intensity: 15.699999809265137
+      Min Intensity: 15.899999618530273
       Name: Left Radar
       Position Transformer: XYZ
       Queue Size: 10
@@ -724,7 +522,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -737,12 +535,12 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 22.100000381469727
+      Max Intensity: 21.799999237060547
       Min Color: 0; 0; 0
-      Min Intensity: 22.100000381469727
+      Min Intensity: 20.399999618530273
       Name: Right Radar
       Position Transformer: XYZ
       Queue Size: 10
@@ -754,7 +552,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Axes Length: 1
       Axes Radius: 0.10000000149011612
@@ -841,6 +639,36 @@ Visualization Manager:
       Unreliable: false
       Use Timestamp: false
       Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 0.6566486358642578
+        Min Value: 0.046370744705200195
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: AxisColor
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: PointCloud2
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.10000000149011612
+      Style: Flat Squares
+      Topic: /concatenatedCloud
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -869,25 +697,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 20.57481575012207
+      Distance: 8.758630752563477
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 1.8031209707260132
-        Y: 8.927276611328125
-        Z: -0.17055539786815643
+        X: 4.1730217933654785
+        Y: 6.295903205871582
+        Z: -0.12684591114521027
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5597963333129883
+      Pitch: 1.544796347618103
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.5435853004455566
+      Yaw: 1.4485852718353271
     Saved: ~
 Window Geometry:
   Back Fiducial Images:
