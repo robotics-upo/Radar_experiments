@@ -1,0 +1,97 @@
+<launch>
+    <param name="use_sim_time" value="true"/>
+
+    <!-- Bag file args -->
+    <arg name="bag_name" default="multi_radarfov30_corrected.bag"/>
+    <arg name="bag_file" default="$(dirname)/bags/$(arg bag_name)"/>
+    <arg name="rate" default="0.6"/>
+    
+    <!-- MCL args-->
+    <arg name="map_name" default="aruco_sigma_0.015.bt"/>
+    <arg name="mcl_map_path" default="$(dirname)/$(arg map_name)"/>
+
+    <!-- Initial pose multi_radarfov30_corrected.bag -->
+    <arg name="initial_x" default="5.9"/>
+    <arg name="initial_y" default="10.46"/>
+    <arg name="initial_z" default="0.1"/>
+    <arg name="initial_a" default="-1.59"/>
+
+    <!-- Frame args -->
+    <arg name="map_frame" default="map"/>
+    <arg name="odom_frame" default="odom"/>
+    <arg name="base_frame" default="base_link"/>
+
+    <arg name="use_imu" default="false"/>
+
+    <arg name="stats_file" default="stats_radar.txt"/>
+
+    <!-- Static TF -->
+    <include file="$(dirname)/frames.launch"/>
+
+    <!-- BAG Player -->
+    <!-- Without the own tf of the bag -->
+    <node pkg="rosbag" type="play" name="play" args="$(arg bag_file) --clock --rate $(arg rate)">
+        <remap from="/tf" to="/not_used_tf"/>
+        <remap from="/tf_static" to="/tf_static_not_used"/>
+    </node>
+
+    <include file="$(find cloud_concatenator)/launch/concatenator.launch"/>
+    
+    <!-- MCL 3D -->
+    <node name="mcl3d_node" type="mcl3d_node" pkg="mcl3d" output="screen">
+        <remap from="/mcl3d_node/initial_pose" to="/initialpose"/>
+        <param name="use_imu" value="$(arg use_imu)"/>
+
+        <param name="rate" value="10.0" />
+        <param name="in_cloud" value="/concatenatedCloud" />
+        <param name="base_frame_id" value="$(arg base_frame)" />
+        <param name="odom_frame_id" value="$(arg odom_frame)" />
+        <param name="global_frame_id" value="$(arg map_frame)" />
+        <!-- <param name="global_frame_id" value="/mapi" /> -->
+
+        <param name="map_path" value="$(arg mcl_map_path)" />
+        <param name="publish_point_cloud" value="true" />
+        <param name="sensor_dev" value="0.015" />
+        <param name="cloud_voxel_size" value="0.05"/>
+        <param name="publish_grid_slice" value="0.0"/>
+
+        <param name="min_particles" value="600" />
+        <param name="max_particles" value="800" />
+
+        <param name="odom_x_mod" value="0.05" />
+        <param name="odom_y_mod" value="0.05" />
+        <param name="odom_z_mod" value="0.01" />
+        <param name="odom_a_mod" value="0.05" />
+
+        <param name="resample_interval" value="1" />
+
+        <param name="update_min_d" value="0.2" />
+        <param name="update_min_a" value="0.1" />
+
+        <param name="initial_x" value="$(arg initial_x)"/>
+        <param name="initial_y" value="$(arg initial_y)"/>
+        <param name="initial_z" value="$(arg initial_z)"/>
+        <param name="initial_a" value="$(arg initial_a)"/>
+
+        <param name="initial_x_dev" value="0.2" />
+        <param name="initial_y_dev" value="0.2" />
+        <param name="initial_z_dev" value="0.2" />
+        <param name="initial_a_dev" value="0.2" />
+        <param name="initial_z_offset" value="0" />
+
+    </node>
+
+    <!-- Odom to tf, to use with MCL -->
+    <node pkg="odom_to_tf" type="odom_to_tf.py" name="odom_to_tf">
+        <param name="laser_frame" value="base_link"/>
+        <param name="rotate_90" value="false"/>
+    </node>
+
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(dirname)/radar.rviz"/>
+
+    <!-- For statistics-->
+    <node name="gather" pkg="gather_data" type="gather_pose.py">
+        <param name="filename" value="$(arg stats_file)"/>
+        <remap from="pose" to="/mcl3d_node/pose"/>
+    </node>
+</launch>
