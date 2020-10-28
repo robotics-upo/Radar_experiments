@@ -4,11 +4,11 @@
     <!-- Bag file args -->
     <arg name="bag_name" default="multi_radarfov30_corrected.bag"/>
     <arg name="bag_file" default="$(dirname)/bags/$(arg bag_name)"/>
-    <arg name="rate" default="0.6"/>
+    <arg name="rate" default="1.0"/>
     
     <!-- MCL args-->
-    <arg name="map_name" default="aruco_sigma_0.015.bt"/>
-    <arg name="mcl_map_path" default="$(dirname)/$(arg map_name)"/>
+    <arg name="map_name" default="aruco_sigma_0.01.bt"/>
+    <arg name="mcl_map_path" default="$(find radar_experiments)/maps/$(arg map_name)"/>
 
     <!-- Initial pose multi_radarfov30_corrected.bag -->
     <arg name="initial_x" default="5.9"/>
@@ -30,7 +30,7 @@
 
     <!-- BAG Player -->
     <!-- Without the own tf of the bag -->
-    <node pkg="rosbag" type="play" name="play" args="$(arg bag_file) --clock --rate $(arg rate)">
+    <node pkg="rosbag" type="play" name="play" args="$(arg bag_file) --clock --rate $(arg rate)" required="true">
         <remap from="/tf" to="/not_used_tf"/>
         <remap from="/tf_static" to="/tf_static_not_used"/>
     </node>

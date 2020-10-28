@@ -51,7 +51,7 @@
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>aruco_detect</build_depend>
   <build_depend>fiducial_slam</build_depend>
-  <build_depend>flip_Image</build_depend>
+  <build_depend>flip_image</build_depend>
   <build_depend>gather_data</build_depend>
   <build_depend>image_transport</build_depend>
   <build_depend>mcl3d</build_depend>
@@ -60,7 +60,7 @@
   <build_depend>sensor_msgs</build_depend>
   <build_export_depend>aruco_detect</build_export_depend>
   <build_export_depend>fiducial_slam</build_export_depend>
-  <build_export_depend>flip_Image</build_export_depend>
+  <build_export_depend>flip_image</build_export_depend>
   <build_export_depend>gather_data</build_export_depend>
   <build_export_depend>image_transport</build_export_depend>
   <build_export_depend>mcl3d</build_export_depend>

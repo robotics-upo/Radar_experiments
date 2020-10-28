@@ -10,7 +10,7 @@ project(radar_experiments)
 find_package(catkin REQUIRED COMPONENTS
   aruco_detect
   fiducial_slam
-  flip_Image
+  flip_image
   gather_data
   image_transport
   mcl3d
