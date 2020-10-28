@@ -5,7 +5,7 @@
     <arg name="bag_name" default="multi_radar_fov30_2.bag"/>
     <arg name="bag_file" default="$(dirname)/bags/$(arg bag_name)"/>
     <arg name="rate" default="0.6"/>
-    
+    <arg name="stats_file" default="stats_gt.txt"/>
 
     <include file="$(dirname)/make_aruco_map.launch">
         <arg name="bag_file" value="$(arg bag_file)"/>
@@ -15,5 +15,11 @@
         <arg name="use_mcl_localization" value="false"/>
         <arg name="aloam_odom" value="false"/>
     </include>
+
+    <!-- For statistics-->
+    <node name="gather" pkg="gather_data" type="gather_pose.py">
+        <param name="filename" value="$(arg stats_file)"/>
+        <remap from="pose" to="/fiducial_pose"/>
+    </node>
     
 </launch>

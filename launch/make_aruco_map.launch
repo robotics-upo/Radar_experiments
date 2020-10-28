@@ -42,7 +42,7 @@
     <node pkg="image_transport" type="republish" name="back_repub" args="compressed in:=/$(arg camera_2)/image_flipped raw out:=/$(arg camera_2)/image_flipped"/>
     <!-- BAG Player -->
     <!-- Without the own tf of the bag -->
-    <node pkg="rosbag" type="play" name="play" args="$(arg bag_file) --clock --pause --rate $(arg rate)">
+    <node pkg="rosbag" type="play" name="play" args="$(arg bag_file) --clock --rate $(arg rate)" required="true">
         <remap from="/tf" to="/not_used_tf" unless="$(arg use_bag_tf)"/>
         <remap from="/tf_static" to="/tf_static_not_used" unless="$(arg use_bag_tf)"/>
     </node>
