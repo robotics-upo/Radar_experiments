@@ -8,7 +8,7 @@
 
     <!-- MCL Args -->
     <arg name="use_mcl_localization" default="true"/>
-    <arg name="mcl_map_path" default="$(dirname)/aruco.bt"/>
+    <arg name="mcl_map_path" default="$(find radar_experiments)/maps/aruco.bt"/>
     <arg name="initial_x" default="6.2"/>
     <arg name="initial_y" default="12.1"/>
     <arg name="initial_z" default="0.1"/>
@@ -144,7 +144,8 @@
         <arg name="systematic_error" value="0.1"/>
         <arg name="covariance_diagonal" value="[1.0, 1.0, 1.0, 0.3, 0.3, 0.3]"/>
         <arg name="weighting_scale" value="1"/>
+        <arg name="map_file" value="$(arg map_file)"/>
     </include>
 
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(dirname)/aruco.rviz"/>
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find radar_experiments)/rviz/aruco.rviz"/>
 </launch>

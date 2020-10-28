@@ -3,11 +3,11 @@
 
     <!-- Bag file args -->
     <arg name="bag_name" default="multi_radar_fov30_2.bag"/>
-    <arg name="bag_file" default="$(dirname)/bags/$(arg bag_name)"/>
+    <arg name="bag_file" default="$(find radar_experiments)/bags/$(arg bag_name)"/>
     <arg name="rate" default="0.6"/>
-    <arg name="stats_file" default="stats_gt.txt"/>
+    <arg name="stats_file" default="$(find radar_experiments)/stats/stats_gt.txt"/>
 
-    <include file="$(dirname)/make_aruco_map.launch">
+    <include file="$(find radar_experiments)/launch/make_aruco_map.launch">
         <arg name="bag_file" value="$(arg bag_file)"/>
         <arg name="rate" value="$(arg rate)"/>
         <arg name="use_bag_tf" value="false"/>
