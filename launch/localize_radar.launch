@@ -7,7 +7,7 @@
     <arg name="rate" default="1.0"/>
     
     <!-- MCL args-->
-    <arg name="map_name" default="aruco_sigma_0.05.bt"/>
+    <arg name="map_name" default="aruco_sigma_0.075.bt"/>
     <arg name="mcl_map_path" default="$(find radar_experiments)/maps/$(arg map_name)"/>
 
     <!-- Initial pose multi_radarfov30_corrected.bag -->
@@ -24,6 +24,12 @@
     <arg name="use_imu" default="false"/>
 
     <arg name="stats_file" default="stats_radar.txt"/>
+
+    <!-- Odometry args-->
+    <arg name="odom_x_mod" default="0.05"/>
+    <arg name="odom_y_mod" default="0.05"/>
+    <arg name="odom_z_mod" default="0.01"/>
+    <arg name="odom_a_mod" default="0.03"/>
 
     <!-- Static TF -->
     <include file="$(dirname)/frames.launch"/>
@@ -51,17 +57,17 @@
 
         <param name="map_path" value="$(arg mcl_map_path)" />
         <param name="publish_point_cloud" value="true" />
-        <param name="sensor_dev" value="0.02" />
+        <param name="sensor_dev" value="0.075" />
         <param name="cloud_voxel_size" value="0.05"/>
         <param name="publish_grid_slice" value="0.0"/>
 
         <param name="min_particles" value="600" />
         <param name="max_particles" value="800" />
 
-        <param name="odom_x_mod" value="0.05" />
-        <param name="odom_y_mod" value="0.05" />
-        <param name="odom_z_mod" value="0.01" />
-        <param name="odom_a_mod" value="0.05" />
+        <param name="odom_x_mod" value="$(arg odom_x_mod)" />
+        <param name="odom_y_mod" value="$(arg odom_y_mod)" />
+        <param name="odom_z_mod" value="$(arg odom_z_mod)" />
+        <param name="odom_a_mod" value="$(arg odom_a_mod)" />
 
         <param name="resample_interval" value="1" />
 
