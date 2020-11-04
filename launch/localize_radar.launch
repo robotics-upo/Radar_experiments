@@ -7,7 +7,7 @@
     <arg name="rate" default="1.0"/>
     
     <!-- MCL args-->
-    <arg name="map_name" default="aruco_sigma_0.01.bt"/>
+    <arg name="map_name" default="aruco_sigma_0.05.bt"/>
     <arg name="mcl_map_path" default="$(find radar_experiments)/maps/$(arg map_name)"/>
 
     <!-- Initial pose multi_radarfov30_corrected.bag -->
@@ -51,7 +51,7 @@
 
         <param name="map_path" value="$(arg mcl_map_path)" />
         <param name="publish_point_cloud" value="true" />
-        <param name="sensor_dev" value="0.015" />
+        <param name="sensor_dev" value="0.02" />
         <param name="cloud_voxel_size" value="0.05"/>
         <param name="publish_grid_slice" value="0.0"/>
 
