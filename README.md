@@ -17,6 +17,11 @@ The launch file come with a default position in the attached map, but it happens
 
 ## Sensor Fusion
 
+### Dependencies
+    
+- Cloud concatenator: https://github.com/robotics-upo/cloud_concatenator
+
+
 To test the radar and lidar fusion node you will need a dataset. You can download [here](https://www.dropbox.com/s/qr5nr5gbng1jflh/2020-12-01-13-21-03.bag?dl=0) a bag containing pointcloud and radar data from December experiments. Download to your home folder and launch the main launch as it follows:
 
 ```
