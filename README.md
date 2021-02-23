@@ -34,8 +34,16 @@ The implementation steps are detailed in the document docs/Lidar_and_radar_fusio
 
 ### Parameters
 
-    - yaw_tolerance : Used to extract 2d virtual scans
-    - ransac_distance_threshold
-    - ransac_iterations
-    - min_ransac_pointcloud_size
+Related to the algorithms:
 
+- yaw_tolerance : Used to extract 2d virtual scans
+- ransac_distance_threshold
+- ransac_iterations
+- min_ransac_pointcloud_size
+- beta
+- distance_threshold
+
+Related to node:
+
+- sychronization_margin
+- time_tolerance
