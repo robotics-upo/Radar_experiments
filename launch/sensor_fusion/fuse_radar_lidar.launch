@@ -45,6 +45,10 @@
     <arg name="beta"                        default="0.2"/> <!-- According to paper, beta varies between 0 and 1 -->
     <arg name="distance_threshold"          default="0.5"/> <!-- Parameter dF of the paper -->
 
+    <!-- Radar and Lidar standard deviations -->
+    <arg name="radar_dev"                   default="0.03"/> 
+    <arg name="lidar_dev"                   default="0.02"/> 
+
     <node name="lidar_radar_fusion_node" type="lidar_radar_fusion_node" pkg="radar_experiments" output="screen">
         <remap from="lidar_points"                 to="/os1_cloud_node/points_non_dense"/>
         <remap from="radar_points"                 to="/$(arg radar_full_cloud_topic_name)"/>
@@ -56,6 +60,8 @@
         <param name="distance_threshold"           value="$(arg distance_threshold)"/>
         <param name="sychronization_margin"        value="$(arg sychronization_margin)"/>
         <param name="time_tolerance"               value="$(arg time_tolerance)"/>
+        <param name="radar_dev"                    value="$(arg radar_dev)"/>
+        <param name="lidar_dev"                    value="$(arg lidar_dev)"/>
     </node>
 
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find radar_experiments)/rviz/fuse_sensors.rviz"/>

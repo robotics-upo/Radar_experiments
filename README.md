@@ -42,6 +42,8 @@ Related to the algorithms:
 - min_ransac_pointcloud_size
 - beta
 - distance_threshold
+- lidar_dev
+- radar_dev
 
 Related to node:
 
