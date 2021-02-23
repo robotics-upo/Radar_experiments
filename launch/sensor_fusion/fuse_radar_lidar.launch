@@ -1,0 +1,34 @@
+<launch>
+
+    <param name="use_sim_time" value="false"/>
+    
+    <arg name="play_bag" default="true"/>
+    <arg name="sec"      default="0"/>
+    <arg name="rate"     default="1"/>
+
+    <arg name="bag_name" default="2020-12-01-13-21-03"/>
+    <arg name="bag_file" default="$(env HOME)/$(arg bag_name).bag"/>
+    
+    <node name="bag_player" type="play" pkg="rosbag" 
+          args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) -q -l" 
+          output="screen" if="$(arg play_bag)"/>
+
+    <!-- Virtual 2D Scan extraction Config -->
+    <arg name="yaw_tolerance"               default="0.03"/>
+
+    <!-- RANSAC Config -->
+    <arg name="ransac_distance_threshold"   default="0.05"/>
+    <arg name="ransac_iterations"           default="6"/>
+    <arg name="min_ransac_pointcloud_size"  default="20"/>
+
+    <node name="lidar_radar_fusion_node" type="lidar_radar_fusion_node" pkg="radar_experiments" output="screen">
+        <remap from="points"                       to="/os1_cloud_node/points_non_dense"/>
+        <param name="yaw_tolerance"                value="$(arg yaw_tolerance)"/>
+        <param name="ransac_distance_threshold"    value="$(arg ransac_distance_threshold)"/>
+        <param name="ransac_iterations"            value="$(arg ransac_iterations)"/>
+        <param name="min_ransac_pointcloud_size"   value="$(arg min_ransac_pointcloud_size)"/>
+    </node>
+
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find radar_experiments)/rviz/fuse_sensors.rviz"/>
+
+</launch>
