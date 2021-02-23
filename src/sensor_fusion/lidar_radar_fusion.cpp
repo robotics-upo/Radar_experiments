@@ -108,9 +108,13 @@ private:
         sensor_msgs::PointCloud2 radar_msg_lidar_frame;
         pcl_ros::transformPointCloud(lidar_msg->header.frame_id, *radar_msg, radar_msg_lidar_frame,tf_listener_);
         pcl::fromROSMsg(radar_msg_lidar_frame, last_radar_cloud_);
-        
+  
         processRadar(last_radar_cloud_);
         processLidar(last_lidar_cloud_, lidar_msg->header.frame_id);
+      
+        std::cout << "Cloud sizes:" << std::endl <<
+                     "  Lidar: " << ransac_result_cloud_.points.size() << std::endl <<
+                     "  Radar: " << last_radar_cloud_.points.size() << std::endl;
 
         //To apply Eq2 of the paper (fuseRanges function) wee need to iterate the lidar and the radar clouds 
         //We need to search for points that verifies that |R_lidar - R_radar| < d_F
@@ -138,27 +142,39 @@ private:
                 fused_range = fuseRanges(radar_point_range, radar_dev_, ranges_it.first, lidar_dev_);
                 //!Lidar insertion conditions
                 if( std::fabs( ranges_it.first - radar_point_range ) > d_f_ ){
-                    lidar_ranges.emplace_back(ranges_it);
+                    if(std::find(lidar_ranges.begin(), lidar_ranges.end(), ranges_it) == lidar_ranges.end() )  
+                        lidar_ranges.emplace_back(ranges_it);
+
+                    continue;
                 }
                 if( ranges_it.first > fused_range && ranges_it.first < 120.0 ){ //120 == infinity
-                    lidar_ranges.emplace_back(ranges_it);
+                    if(std::find(lidar_ranges.begin(), lidar_ranges.end(), ranges_it) == lidar_ranges.end() )  
+                        lidar_ranges.emplace_back(ranges_it);
+
+                    continue;
                 }
                 if( ranges_it.first - radar_point_range > d_f_ && ranges_it.first < fused_range){
-                    lidar_ranges.emplace_back(ranges_it);
+                    if(std::find(lidar_ranges.begin(), lidar_ranges.end(), ranges_it) == lidar_ranges.end() )  
+                        lidar_ranges.emplace_back(ranges_it);
+
+                    continue;
                 }
                 //! Radar Insertion conditions
                 if( ranges_it.first - radar_point_range < -1*d_f_){
                     std::pair<double, double> p(radar_point_range, pointYaw(it));
                     radar_ranges.emplace_back(p);
+                    continue;
                 }
                 if( ranges_it.first >= 120.0 && radar_point_range < 120.0 ){ //120 == infinity
                     std::pair<double, double> p(radar_point_range, pointYaw(it));
                     radar_ranges.emplace_back(p);
+                    continue;
                 }
                 //! Fused ranges insertion condition
                 if( std::fabs(ranges_it.first - radar_point_range) < d_f_ ){
                     std::pair<double, double> p(fused_range, ranges_it.second);
                     fused_ranges.emplace_back(p);
+                    continue;
                 }                
             }
         }
