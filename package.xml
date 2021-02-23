@@ -49,23 +49,25 @@
   <!-- Use doc_depend for packages you need only for building documentation: -->
   <!--   <doc_depend>doxygen</doc_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>aruco_detect</build_depend>
+  <!-- <build_depend>aruco_detect</build_depend>
   <build_depend>fiducial_slam</build_depend>
   <build_depend>flip_image</build_depend>
   <build_depend>gather_data</build_depend>
   <build_depend>image_transport</build_depend>
-  <build_depend>mcl3d</build_depend>
+  <build_depend>mcl3d</build_depend> -->
   <build_depend>roscpp</build_depend>
+  <build_depend>pcl_ros</build_depend>
   <build_depend>rospy</build_depend>
   <build_depend>sensor_msgs</build_depend>
-  <build_export_depend>aruco_detect</build_export_depend>
+  <!--<build_export_depend>aruco_detect</build_export_depend>
   <build_export_depend>fiducial_slam</build_export_depend>
   <build_export_depend>flip_image</build_export_depend>
   <build_export_depend>gather_data</build_export_depend>
   <build_export_depend>image_transport</build_export_depend>
-  <build_export_depend>mcl3d</build_export_depend>
+  <build_export_depend>mcl3d</build_export_depend> -->
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>rospy</build_export_depend>
+  <build_export_depend>pcl_ros</build_export_depend>
   <build_export_depend>sensor_msgs</build_export_depend>
   <exec_depend>aruco_detect</exec_depend>
   <exec_depend>fiducial_slam</exec_depend>
@@ -75,6 +77,7 @@
   <exec_depend>mcl3d</exec_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rospy</exec_depend>
+  <exec_depend>pcl_ros</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
 
 
