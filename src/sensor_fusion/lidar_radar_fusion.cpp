@@ -20,7 +20,7 @@ class LidarRadarFuser
 public:
     LidarRadarFuser(): spinner(2), pointclouds_subs_sync_(NULL)
     {
-
+        //Lidar and Radar pointcloud sync subscriber
         pnh_.param("sychronization_margin", synch_margin_queue_,10);
 
         pc_sub_lidar_.reset(new message_filters::Subscriber<sensor_msgs::PointCloud2>(pnh_, "/lidar_points", 1));
@@ -29,10 +29,11 @@ public:
         pointclouds_subs_sync_ = new message_filters::Synchronizer<LidarRadarSyncPolicy>(LidarRadarSyncPolicy(synch_margin_queue_), *pc_sub_lidar_, *pc_sub_radar_);
         pointclouds_subs_sync_->registerCallback(&LidarRadarFuser::pointCloudsCallback, this);
 
-        virtual_2d_scan_pub_        = pnh_.advertise<sensor_msgs::LaserScan>("virtual_2d_scan", 1);
+        //Publishers
         virtual_2d_pointcloud_pub_  = pnh_.advertise<pcl::PointCloud<pcl::PointXYZ>>("virtual_2d_pointcloud", 1);
         ransac_result_pub_          = pnh_.advertise<pcl::PointCloud<pcl::PointXYZ>>("ransac_result", 1);
         overlapping_dist_pub_       = pnh_.advertise<std_msgs::Float32>("overlapping_distance", 1);
+        
         //Params....
         pnh_.param("yaw_tolerance", yaw_tolerance_, 0.1);
         pnh_.param("ransac_distance_threshold", ransac_distance_threshold_, 0.01);
@@ -71,11 +72,9 @@ private:
     
     void processLidar(const pcl::PointCloud<pcl::PointXYZ> &points, const std::string _frame_id)
     {
-
         virtual_2d_scan_cloud_ = extract2DVirtualScans(points, _frame_id);
 
         ransac_result_cloud_ = applyLineRANSAC(virtual_2d_scan_cloud_, _frame_id);
-        // virtual_2d_laserscan_ = cloud2LaserScan(virtual_2d_scan_cloud_);
     }
     void pointCloudsCallback(const sensor_msgs::PointCloud2::ConstPtr& lidar_msg,
                              const sensor_msgs::PointCloud2::ConstPtr& radar_msg)
@@ -84,10 +83,9 @@ private:
         std::cout<< "Time difference: " << time_diff.toSec() << std::endl;
         
         if(time_diff.toSec() > time_tolerance_){
-            std::cout<<"Skipping"<<std::endl; 
+            ROS_WARN("Skipping pair of lidar-radar clouds because they exceed time tolerance %f > %f", time_diff.toSec(), time_tolerance_);
             return;
         }
-
 
         pcl::fromROSMsg(*lidar_msg, last_lidar_cloud_);
         pcl::fromROSMsg(*radar_msg, last_radar_cloud_);
@@ -97,12 +95,10 @@ private:
     }
     double dist2Origin(const pcl::PointXYZ &point)
     {
-
         return sqrtf(point.x * point.x + point.y * point.y);
     }
     double pointYaw(const pcl::PointXYZ &point)
     {
-
         if (point.y == 0.0 && point.x == 0)
             return 0;
 
@@ -198,9 +194,7 @@ private:
 
         return *out_cloud;
     }
-    sensor_msgs::LaserScan cloud2LaserScan(const pcl::PointCloud<pcl::PointXYZ> &points)
-    {
-    }
+   
     
     //
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, sensor_msgs::PointCloud2> LidarRadarSyncPolicy; 
@@ -211,7 +205,6 @@ private:
     
     ros::NodeHandle pnh_{"~"};
     ros::AsyncSpinner spinner;
-    ros::Publisher  virtual_2d_scan_pub_;
     ros::Publisher  virtual_2d_pointcloud_pub_;
     ros::Publisher  ransac_result_pub_;
     ros::Publisher  overlapping_dist_pub_;
@@ -220,20 +213,20 @@ private:
     pcl::PointCloud<pcl::PointXYZ> last_lidar_cloud_;
     pcl::PointCloud<pcl::PointXYZ> virtual_2d_scan_cloud_;
     pcl::PointCloud<pcl::PointXYZ> ransac_result_cloud_;
-    sensor_msgs::LaserScan virtual_2d_laserscan_;
 
     //!Calculated params
     double overlapping_scan_field_r_f_;//Calculated at every fusion cycle
     double average_range_radar_scan_;
     double maximum_range_radar_measurement;
 
-    //!Params
+    //! Node Params
     int synch_margin_queue_;
+    double time_tolerance_;     
 
+    //! Algorithm params
     double yaw_tolerance_; // Used to extract virtual 2d scans. If two points have a yaw
                            // difference less than yaw_tolerance, we assume that they lie on the same
                            // vertical linea
-    double time_tolerance_;     
 
     double ransac_distance_threshold_;
     int ransac_iterations_;
