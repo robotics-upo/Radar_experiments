@@ -3,7 +3,8 @@ Panels:
     Help Height: 78
     Name: Displays
     Property Tree Widget:
-      Expanded: ~
+      Expanded:
+        - /FinalResultCloud1
       Splitter Ratio: 0.729411780834198
     Tree Height: 728
   - Class: rviz/Selection
@@ -60,7 +61,7 @@ Visualization Manager:
       Channel Name: intensity
       Class: rviz/PointCloud2
       Color: 255; 255; 255
-      Color Transformer: Intensity
+      Color Transformer: FlatColor
       Decay Time: 0
       Enabled: true
       Invert Rainbow: false
@@ -290,6 +291,45 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Class: rviz/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+        base_link:
+          Value: true
+        os1_lidar:
+          Value: true
+        os1_sensor:
+          Value: true
+        ti_mmwave_front_radar:
+          Value: true
+        ti_mmwave_left_radar:
+          Value: true
+        ti_mmwave_rear_radar:
+          Value: true
+        ti_mmwave_right_radar:
+          Value: true
+      Marker Scale: 1
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        base_link:
+          os1_sensor:
+            os1_lidar:
+              {}
+            ti_mmwave_front_radar:
+              {}
+            ti_mmwave_left_radar:
+              {}
+            ti_mmwave_rear_radar:
+              {}
+            ti_mmwave_right_radar:
+              {}
+      Update Interval: 0
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -325,18 +365,18 @@ Visualization Manager:
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -1.0748335123062134
-        Y: 1.2920705080032349
-        Z: -2.001788854598999
+        X: -2.4380686283111572
+        Y: -0.4949162006378174
+        Z: -1.2782816886901855
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.0753979682922363
+      Pitch: 1.0497968196868896
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.6253798604011536
+      Yaw: 1.3453792333602905
     Saved: ~
 Window Geometry:
   Displays:
