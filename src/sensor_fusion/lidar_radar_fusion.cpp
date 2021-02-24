@@ -60,6 +60,10 @@ public:
         pnh_.param("radar_dev", radar_dev_, 0.03);
         pnh_.param("lidar_dev", lidar_dev_, 0.02);
 
+
+        pnh_.param("lidar_max_range", lidar_max_range_, 120.0);
+        if(lidar_max_range_ < 0) lidar_max_range_ *= -1;
+
     }
     void run()
     {
@@ -147,7 +151,7 @@ private:
 
                     continue;
                 }
-                if( ranges_it.first > fused_range && ranges_it.first < 120.0 ){ //120 == infinity
+                if( ranges_it.first > fused_range && ranges_it.first < lidar_max_range_ ){ //120 == infinity
                     if(std::find(lidar_ranges.begin(), lidar_ranges.end(), ranges_it) == lidar_ranges.end() )  
                         lidar_ranges.emplace_back(ranges_it);
 
@@ -165,7 +169,7 @@ private:
                     radar_ranges.emplace_back(p);
                     continue;
                 }
-                if( ranges_it.first >= 120.0 && radar_point_range < 120.0 ){ //120 == infinity
+                if( ranges_it.first >= lidar_max_range_ && radar_point_range < lidar_max_range_ ){ //120 == infinity
                     std::pair<double, double> p(radar_point_range, pointYaw(it));
                     radar_ranges.emplace_back(p);
                     continue;
@@ -386,7 +390,7 @@ private:
     double overlapping_scan_field_r_f_;//Calculated at every fusion cycle
     double average_range_radar_scan_;
     double maximum_range_radar_measurement;
-
+    //! Standard deviation of sensors
     double radar_dev_;
     double lidar_dev_;
 
@@ -405,6 +409,8 @@ private:
 
     double beta_;
     double d_f_;
+
+    double lidar_max_range_;
 };
 int main(int argc, char **argv)
 {
