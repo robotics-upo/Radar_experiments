@@ -20,7 +20,7 @@ BAG=$HOME/Humo/miercoles_28oct/2020-10-28-12-40-40_8.bag
 # roslaunch radar_experiments localize_gt.launch bag_file:=$BAG stats_file:=stats_gt_8.txt
 
 until [ $CONTADOR -gt $2 ]; do
-  roslaunch radar_experiments localize_lidar.launch initial_x:=$X initial_y:=$Y initial_a:=$A bag_file:=$BAG stats_file:=stats_lidar_8_$CONTADOR.txt
+  # roslaunch radar_experiments localize_lidar.launch initial_x:=$X initial_y:=$Y initial_a:=$A bag_file:=$BAG stats_file:=stats_lidar_8_$CONTADOR.txt
   roslaunch radar_experiments localize_radar.launch initial_x:=$X initial_y:=$Y initial_a:=$A bag_file:=$BAG stats_file:=stats_radar_8_$CONTADOR.txt
   let CONTADOR+=1
 done
