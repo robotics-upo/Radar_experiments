@@ -259,16 +259,14 @@ private:
         p.z = 0;
         //Undo fused ranges cloud
         for(auto &it: fused_ranges){
-            p.x = it.first*cos(it.second);
-            p.y = it.first*sin(it.second);
+            fromPolarToXY(it, p);
             fused_points_cloud.push_back(p);
             result_cloud.push_back(p);
         }
         fused_points_cloud_pub_.publish(fused_points_cloud);
         //Undo radar ranges cloud
         for(auto &it: radar_ranges){
-            p.x = it.first*cos(it.second);
-            p.y = it.first*sin(it.second);
+            fromPolarToXY(it, p);
             radar_points_cloud.push_back(p);
             result_cloud.push_back(p);
         }
@@ -276,8 +274,7 @@ private:
 
         //Undo lidar ranges cloud
         for(auto &it: lidar_ranges){
-            p.x = it.first*cos(it.second);
-            p.y = it.first*sin(it.second);
+            fromPolarToXY(it, p);
             lidar_points_cloud.push_back(p);
             result_cloud.push_back(p);
         }
@@ -294,6 +291,11 @@ private:
     template <typename T>
     std::pair<double, double> xyToPolar(const T &point){
         return std::make_pair<double, double>(dist2Origin(point), pointYaw(point));
+    }
+    template <typename T>
+    void fromPolarToXY(const std::pair<double, double>  &point , T &xy_point){
+        xy_point.x = point.first*cos(point.second);
+        xy_point.y = point.first*sin(point.second);
     }
     double radarDev(const pcl::PointXYZ &point){
         // return radar_dev_prop_const_ * pow(dist2Origin(point),2);
