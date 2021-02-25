@@ -101,7 +101,8 @@ public:
         ros::waitForShutdown();
     }
 private:
-    void processRadar(const pcl::PointCloud<pcl::PointXYZ> &points, const std::string _frame_id){
+    template<typename T=pcl::PointXYZI>
+    void processRadar(const pcl::PointCloud<T> &points, const std::string _frame_id){
         
         std::vector<double> dist_vector;
         maximum_range_radar_measurement = 0;
@@ -290,7 +291,8 @@ private:
         return result_cloud;
     }
     //According to the paper the sigma_R is proportional to 1/Pe with Pe received power. Pe should be proportional to 1/R2 ?
-    std::pair<double, double> xyToPolar(const pcl::PointXYZ &point){
+    template <typename T>
+    std::pair<double, double> xyToPolar(const T &point){
         return std::make_pair<double, double>(dist2Origin(point), pointYaw(point));
     }
     double radarDev(const pcl::PointXYZ &point){
@@ -316,11 +318,13 @@ private:
         }*/
         return lidar_dev_;
     }
-    double dist2Origin(const pcl::PointXYZ &point)
+    template <typename T>
+    double dist2Origin(const T &point)
     {
-        return sqrtf(point.x * point.x + point.y * point.y);
+        return sqrtf(point.x * point.x + point.y * point.y + point.z * point.z);
     }
-    double pointYaw(const pcl::PointXYZ &point)
+    template <typename T>
+    double pointYaw(const T &point)
     {
         if (point.y == 0.0 && point.x == 0)
             return 0;
@@ -379,7 +383,8 @@ private:
 
         return out;
     }
-    pcl::PointCloud<pcl::PointXYZ> applyLineRANSAC(const pcl::PointCloud<pcl::PointXYZ> &cloud, const std::string &frame_id,
+    template <typename T>
+    pcl::PointCloud<T> applyLineRANSAC(const pcl::PointCloud<T> &cloud, const std::string &frame_id,
                                                    const int _ransac_iterations, const int _min_pointcloud_size, const double _ransac_distance_threshold)
     {
 
@@ -388,13 +393,13 @@ private:
             return cloud;
         }
 
-        pcl::PointCloud<pcl::PointXYZ>::Ptr out_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-        pcl::PointCloud<pcl::PointXYZ>::Ptr in_intermediate(new pcl::PointCloud<pcl::PointXYZ>);
+        typename pcl::PointCloud<T>::Ptr out_cloud(new pcl::PointCloud<T>);
+        typename pcl::PointCloud<T>::Ptr in_intermediate(new pcl::PointCloud<T>);
         
-        pcl::SampleConsensusModelLine<pcl::PointXYZ>::Ptr model_l;
-        pcl::RandomSampleConsensus<pcl::PointXYZ>::Ptr ransac;
+        typename pcl::SampleConsensusModelLine<T>::Ptr model_l;
+        typename pcl::RandomSampleConsensus<T>::Ptr ransac;
         pcl::PointIndices::Ptr inliers(new pcl::PointIndices());
-        pcl::ExtractIndices<pcl::PointXYZ> extract;
+        typename pcl::ExtractIndices<T> extract;
 
         *in_intermediate = cloud;
 
@@ -404,8 +409,8 @@ private:
                                                                                      // of remaining points to see how "spreaded" they are
                                                                                      // and continue iterating if they not much spreaded?
 
-            model_l.reset(new pcl::SampleConsensusModelLine<pcl::PointXYZ>(in_intermediate));
-            ransac.reset(new pcl::RandomSampleConsensus<pcl::PointXYZ>(model_l));
+            model_l.reset(new pcl::SampleConsensusModelLine<T>(in_intermediate));
+            ransac.reset(new pcl::RandomSampleConsensus<T>(model_l));
             inliers.reset(new pcl::PointIndices());
 
             ransac->setDistanceThreshold(_ransac_distance_threshold);
@@ -471,10 +476,10 @@ private:
     std::unique_ptr<dynamic_reconfigure::Server<radar_experiments::LidarFusionConfig>::CallbackType> dynamic_recong_cb_f_;
     bool first{true}; //Used to detect the init of the server, when it is initialized it calls the callback at the startup and overrides the launch params(whe dont want this)
 
-    pcl::PointCloud<pcl::PointXYZ> last_radar_cloud_;
+    pcl::PointCloud<pcl::PointXYZI> last_radar_cloud_, radar_ransac_result_cloud_;
     pcl::PointCloud<pcl::PointXYZ> last_lidar_cloud_;
     pcl::PointCloud<pcl::PointXYZ> virtual_2d_scan_cloud_;
-    pcl::PointCloud<pcl::PointXYZ> lidar_ransac_result_cloud_, radar_ransac_result_cloud_;
+    pcl::PointCloud<pcl::PointXYZ> lidar_ransac_result_cloud_;
     //! Cloud to store final result
     pcl::PointCloud<pcl::PointXYZ> fused_scan_result_;
 
