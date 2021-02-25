@@ -12,7 +12,7 @@
     <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name).bag"/>
     
     <node name="bag_player" type="play" pkg="rosbag" 
-          args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) -q -l" 
+          args="$(arg bag_file) --pause -r $(arg rate) --clock -s $(arg sec) -q -l" 
           output="screen" if="$(arg play_bag)"/>
 
     <arg name="use_async_concatenator"      default="false"/>
@@ -45,39 +45,47 @@
     </node>
 
     <!-- Sync policy param -->
-    <arg name="sychronization_margin"       default="10"/>
-    <arg name="time_tolerance"              default="0.3"/>
+    <arg name="sychronization_margin"             default="10"/>
+    <arg name="time_tolerance"                    default="0.3"/>
 
     <!-- Virtual 2D Scan extraction Config -->
-    <arg name="yaw_tolerance"               default="0.04"/>
+    <arg name="yaw_tolerance"                     default="0.04"/>
 
     <!-- RANSAC Config -->
-    <arg name="ransac_distance_threshold"   default="0.05"/>
-    <arg name="ransac_iterations"           default="6"/>
-    <arg name="min_ransac_pointcloud_size"  default="15"/>
+        <!-- Lidar -->
+    <arg name="lidar_ransac_distance_threshold"   default="0.05"/>
+    <arg name="lidar_ransac_iterations"           default="6"/>
+    <arg name="lidar_min_ransac_pointcloud_size"  default="15"/>
+        <!-- Radar -->
+    <arg name="radar_ransac_distance_threshold"   default="0.05"/>
+    <arg name="radar_ransac_iterations"           default="6"/>
+    <arg name="radar_min_ransac_pointcloud_size"  default="15"/>
 
     <!-- Third step -->
-    <arg name="beta"                        default="0.2"/> <!-- According to paper, beta varies between 0 and 1 -->
-    <arg name="distance_threshold"          default="0.2"/> <!-- Parameter dF of the paper -->
+    <arg name="beta"                              default="0.2"/> <!-- According to paper, beta varies between 0 and 1 -->
+    <arg name="distance_threshold"                default="0.2"/> <!-- Parameter dF of the paper -->
 
     <!-- Radar and Lidar standard deviations -->
-    <arg name="radar_dev"                   default="0.03"/> 
-    <arg name="lidar_dev"                   default="0.02"/> 
-    <arg name="lidar_max_range"             default="120.0"/> <!-- Useful when lidar pointclouds publishes ranges with Inf values. Ouster lidar I think does not do-->
+    <arg name="radar_dev"                         default="0.03"/> 
+    <arg name="lidar_dev"                         default="0.02"/> 
+    <arg name="lidar_max_range"                   default="120.0"/> <!-- Useful when lidar pointclouds publishes ranges with Inf values. Ouster lidar I think does not do-->
 
     <node name="lidar_radar_fusion_node" type="lidar_radar_fusion_node" pkg="radar_experiments" output="screen">
-        <remap from="lidar_points"                 to="/os1_cloud_node/points_non_dense"/>
-        <remap from="radar_points"                 to="/$(arg radar_full_cloud_topic_name)"/>
-        <param name="yaw_tolerance"                value="$(arg yaw_tolerance)"/>
-        <param name="ransac_distance_threshold"    value="$(arg ransac_distance_threshold)"/>
-        <param name="ransac_iterations"            value="$(arg ransac_iterations)"/>
-        <param name="min_ransac_pointcloud_size"   value="$(arg min_ransac_pointcloud_size)"/>
-        <param name="beta"                         value="$(arg beta)"/>
-        <param name="distance_threshold"           value="$(arg distance_threshold)"/>
-        <param name="sychronization_margin"        value="$(arg sychronization_margin)"/>
-        <param name="time_tolerance"               value="$(arg time_tolerance)"/>
-        <param name="radar_dev"                    value="$(arg radar_dev)"/>
-        <param name="lidar_dev"                    value="$(arg lidar_dev)"/>
+        <remap from="lidar_points"                       to="/os1_cloud_node/points_non_dense"/>
+        <remap from="radar_points"                       to="/$(arg radar_full_cloud_topic_name)"/>
+        <param name="yaw_tolerance"                      value="$(arg yaw_tolerance)"/>
+        <param name="lidar_ransac_distance_threshold"    value="$(arg lidar_ransac_distance_threshold)"/>
+        <param name="lidar_ransac_iterations"            value="$(arg lidar_ransac_iterations)"/>
+        <param name="lidar_min_ransac_pointcloud_size"   value="$(arg lidar_min_ransac_pointcloud_size)"/>
+        <param name="radar_ransac_distance_threshold"    value="$(arg radar_ransac_distance_threshold)"/>
+        <param name="radar_ransac_iterations"            value="$(arg radar_ransac_iterations)"/>
+        <param name="radar_min_ransac_pointcloud_size"   value="$(arg radar_min_ransac_pointcloud_size)"/>
+        <param name="beta"                               value="$(arg beta)"/>
+        <param name="distance_threshold"                 value="$(arg distance_threshold)"/>
+        <param name="sychronization_margin"              value="$(arg sychronization_margin)"/>
+        <param name="time_tolerance"                     value="$(arg time_tolerance)"/>
+        <param name="radar_dev"                          value="$(arg radar_dev)"/>
+        <param name="lidar_dev"                          value="$(arg lidar_dev)"/>
     </node>
 
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find radar_experiments)/rviz/fuse_sensors.rviz"/>

@@ -52,11 +52,15 @@ public:
 
         //Params....
         pnh_.param("yaw_tolerance", yaw_tolerance_, 0.1);
-        pnh_.param("ransac_distance_threshold", ransac_distance_threshold_, 0.01);
-        pnh_.param("ransac_iterations", ransac_iterations_, 5);
 
-        pnh_.param("min_ransac_pointcloud_size", min_ransac_pointcloud_size_, 10);
+        pnh_.param("lidar_ransac_distance_threshold", ransac_distance_threshold_lidar_, 0.01);
+        pnh_.param("lidar_ransac_iterations", ransac_iterations_lidar_, 5);
+        pnh_.param("lidar_min_ransac_pointcloud_size", min_ransac_pointcloud_size_lidar_, 10);
         
+        pnh_.param("radar_ransac_distance_threshold", ransac_distance_threshold_radar_, 0.01);
+        pnh_.param("radar_ransac_iterations", ransac_iterations_radar_, 5);
+        pnh_.param("radar_min_ransac_pointcloud_size", min_ransac_pointcloud_size_radar_, 10);
+
         pnh_.param("beta", beta_, 0.2);
         if(beta_ < 0.0 || beta_ > 1.0) beta_ = 0.2; //Default in case you try to set a bad value
         
@@ -73,6 +77,23 @@ public:
         pnh_.param("lidar_max_range", lidar_max_range_, 120.0);
         if(lidar_max_range_ < 0) lidar_max_range_ *= -1;
 
+        std::cout << "\033[1;31m\n---------------------------------------------\033[0m" << std::endl 
+                  << "Lidar - Radar Scans Fuser Params:    " <<std::endl << std::endl
+                  << "\tSynchronization Margin:            " << synch_margin_queue_ << std::endl
+                  << "\tYaw Tolerance (rad):               " << yaw_tolerance_  << std::endl
+                  << "\tBeta:                              " << beta_ << std::endl
+                  << "\tDistance Threshold (d_F):          " << d_f_ << std::endl
+                  << "\tTime Tolerance (s):                " << time_tolerance_ << std::endl
+                  << "\tLidar Std Dev (m):                 " << lidar_dev_ << std::endl
+                  << "\tLidar Ransac Distance Threshold:   " << ransac_distance_threshold_lidar_ << std::endl
+                  << "\tLidar Ransac Max Iters:            " << ransac_iterations_lidar_ << std::endl
+                  << "\tLidar Ransac Min PointCloud Size:  " << min_ransac_pointcloud_size_lidar_ << std::endl
+                  << "\tRadar Std Dev (m):                 " << radar_dev_ << std::endl
+                  << "\tRadar Ransac Distance Threshold:   " << ransac_distance_threshold_radar_ << std::endl
+                  << "\tRadar Ransac Max Iters:            " << ransac_iterations_radar_ << std::endl
+                  << "\tRadar Ransac Min PointCloud Size:  " << min_ransac_pointcloud_size_radar_ << std::endl
+                  << "\033[1;31m---------------------------------------------\033[0m" << std::endl;
+
     }
     void run()
     {
@@ -80,7 +101,7 @@ public:
         ros::waitForShutdown();
     }
 private:
-    void processRadar(const pcl::PointCloud<pcl::PointXYZ> &points){
+    void processRadar(const pcl::PointCloud<pcl::PointXYZ> &points, const std::string _frame_id){
         
         std::vector<double> dist_vector;
         maximum_range_radar_measurement = 0;
@@ -98,13 +119,16 @@ private:
         overlapping_dist.data = overlapping_scan_field_r_f_;
         overlapping_dist_pub_.publish(overlapping_dist);
 
+        //
+        radar_ransac_result_cloud_ = applyLineRANSAC(points, _frame_id, ransac_iterations_radar_, min_ransac_pointcloud_size_radar_, ransac_distance_threshold_radar_);
+
     }
     
     void processLidar(const pcl::PointCloud<pcl::PointXYZ> &points, const std::string _frame_id)
     {
         virtual_2d_scan_cloud_ = extract2DVirtualScans(points, _frame_id);
 
-        ransac_result_cloud_ = applyLineRANSAC(virtual_2d_scan_cloud_, _frame_id);
+        lidar_ransac_result_cloud_ = applyLineRANSAC(virtual_2d_scan_cloud_, _frame_id, ransac_iterations_lidar_, min_ransac_pointcloud_size_lidar_, ransac_distance_threshold_lidar_);
     }
     void pointCloudsCallback(const sensor_msgs::PointCloud2::ConstPtr& lidar_msg,
                              const sensor_msgs::PointCloud2::ConstPtr& radar_msg)
@@ -122,12 +146,13 @@ private:
         pcl_ros::transformPointCloud(lidar_msg->header.frame_id, *radar_msg, radar_msg_lidar_frame,tf_listener_);
         pcl::fromROSMsg(radar_msg_lidar_frame, last_radar_cloud_);
   
-        processRadar(last_radar_cloud_);
+        processRadar(last_radar_cloud_, radar_msg->header.frame_id);
         processLidar(last_lidar_cloud_, lidar_msg->header.frame_id);
       
         std::cout << "Cloud sizes:" << std::endl <<
-                     "  Lidar: " << ransac_result_cloud_.points.size() << std::endl <<
-                     "  Radar: " << last_radar_cloud_.points.size() << std::endl;
+                     "  Lidar: " << lidar_ransac_result_cloud_.points.size() << std::endl <<
+                     "  Radar: " << last_radar_cloud_.points.size() << std::endl <<
+                     "  Radar After Ransac: " << radar_ransac_result_cloud_.points.size() << std::endl;
 
         //To apply Eq2 of the paper (fuseRanges function) wee need to iterate the lidar and the radar clouds 
         //We need to search for points that verifies that |R_lidar - R_radar| < d_F
@@ -139,10 +164,10 @@ private:
 
         //It's more efficient to iterate over radar cloud as it has less points that the lidar cloud (? sure ?)
         std::map<int, std::pair<double, double>> lidar_ranges_polar_coord_map;
-        std::cout<< "Ransac result cloud size: " << ransac_result_cloud_.points.size() <<std::endl; 
+        std::cout<< "Ransac result cloud size: " << lidar_ransac_result_cloud_.points.size() <<std::endl; 
         int i = 0;
         std::pair<int, std::pair<double,double>> temp_pair(0,std::pair<double,double>(0,0));
-        for(auto &it: ransac_result_cloud_){
+        for(auto &it: lidar_ransac_result_cloud_){
             ++temp_pair.first;
             temp_pair.second = xyToPolar(it);
             lidar_ranges_polar_coord_map.insert(temp_pair);
@@ -158,7 +183,7 @@ private:
         double radar_point_range;        
         double fused_range;
         //TODO There are repeated points pushed inside the final container. FIX
-        for(auto &it: last_radar_cloud_){
+        for(auto &it: radar_ransac_result_cloud_){
             radar_point_range = dist2Origin(it);
             if(lidar_ranges_polar_coord_map.empty()) break; //If no lidar cloud, exit and fill the result cloud with the radar poinnts
             
@@ -210,7 +235,7 @@ private:
         }//In case lidar cloud is empty, fill the result cloud with the radar points (VERY HIGH DENSITY SMOKE CASE)
         
         if(lidar_ranges_polar_coord_map.empty()){
-            for(auto &it: last_radar_cloud_){
+            for(auto &it: radar_ransac_result_cloud_){
                 radar_point_range = dist2Origin(it);
                 std::pair<double, double> p(radar_point_range, pointYaw(it));
                 radar_ranges.emplace_back(p);
@@ -354,7 +379,8 @@ private:
 
         return out;
     }
-    pcl::PointCloud<pcl::PointXYZ> applyLineRANSAC(const pcl::PointCloud<pcl::PointXYZ> &cloud, const std::string &frame_id)
+    pcl::PointCloud<pcl::PointXYZ> applyLineRANSAC(const pcl::PointCloud<pcl::PointXYZ> &cloud, const std::string &frame_id,
+                                                   const int _ransac_iterations, const int _min_pointcloud_size, const double _ransac_distance_threshold)
     {
 
         pcl::PointCloud<pcl::PointXYZ>::Ptr out_cloud(new pcl::PointCloud<pcl::PointXYZ>);
@@ -367,9 +393,9 @@ private:
 
         *in_intermediate = cloud;
 
-        for (int i = 0; i < ransac_iterations_; ++i)
+        for (int i = 0; i < _ransac_iterations; ++i)
         {
-            if(in_intermediate->points.size() < min_ransac_pointcloud_size_ ) break; //It should be nice here to check the standard deviation 
+            if(in_intermediate->points.size() < _min_pointcloud_size ) break; //It should be nice here to check the standard deviation 
                                                                                      // of remaining points to see how "spreaded" they are
                                                                                      // and continue iterating if they not much spreaded?
 
@@ -377,7 +403,7 @@ private:
             ransac.reset(new pcl::RandomSampleConsensus<pcl::PointXYZ>(model_l));
             inliers.reset(new pcl::PointIndices());
 
-            ransac->setDistanceThreshold(ransac_distance_threshold_);
+            ransac->setDistanceThreshold(_ransac_distance_threshold);
             ransac->computeModel();
             ransac->getInliers(inliers->indices);
             for(auto &it: inliers->indices){
@@ -401,15 +427,19 @@ private:
             first = false;
             return;
         }
-        yaw_tolerance_              = config.yaw_tolerance;
-        ransac_distance_threshold_  = config.ransac_distance_threshold;
-        beta_                       = config.beta;
-        d_f_                        = config.distance_threshold;
-        time_tolerance_             = config.time_tolerance;
-        radar_dev_                  = config.radar_dev;
-        lidar_dev_                  = config.lidar_dev;
-        ransac_iterations_          = config.ransac_iterations;
-        min_ransac_pointcloud_size_ = config.min_ransac_pointcloud_size;
+        yaw_tolerance_                    = config.yaw_tolerance;
+        beta_                             = config.beta;
+        d_f_                              = config.distance_threshold;
+        time_tolerance_                   = config.time_tolerance;
+        radar_dev_                        = config.radar_dev;
+        lidar_dev_                        = config.lidar_dev;
+        ransac_iterations_lidar_          = config.lidar_ransac_iterations;
+        min_ransac_pointcloud_size_lidar_ = config.lidar_min_ransac_pointcloud_size;
+        ransac_distance_threshold_lidar_  = config.lidar_ransac_distance_threshold;
+        ransac_iterations_radar_          = config.radar_ransac_iterations;
+        min_ransac_pointcloud_size_radar_ = config.radar_min_ransac_pointcloud_size;
+        ransac_distance_threshold_radar_  = config.radar_ransac_distance_threshold;
+
         ROS_INFO("Dynamic reconfigure called!");
     }
    
@@ -439,7 +469,7 @@ private:
     pcl::PointCloud<pcl::PointXYZ> last_radar_cloud_;
     pcl::PointCloud<pcl::PointXYZ> last_lidar_cloud_;
     pcl::PointCloud<pcl::PointXYZ> virtual_2d_scan_cloud_;
-    pcl::PointCloud<pcl::PointXYZ> ransac_result_cloud_;
+    pcl::PointCloud<pcl::PointXYZ> lidar_ransac_result_cloud_, radar_ransac_result_cloud_;
     //! Cloud to store final result
     pcl::PointCloud<pcl::PointXYZ> fused_scan_result_;
 
@@ -460,9 +490,9 @@ private:
                            // difference less than yaw_tolerance, we assume that they lie on the same
                            // vertical linea
 
-    double ransac_distance_threshold_;
-    int ransac_iterations_;
-    int min_ransac_pointcloud_size_;
+    double ransac_distance_threshold_lidar_, ransac_distance_threshold_radar_;
+    int ransac_iterations_lidar_, ransac_iterations_radar_;
+    int min_ransac_pointcloud_size_lidar_,min_ransac_pointcloud_size_radar_;
 
     double beta_;
     double d_f_;
