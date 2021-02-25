@@ -53,17 +53,17 @@
 
     <!-- RANSAC Config -->
         <!-- Lidar -->
-    <arg name="lidar_ransac_distance_threshold"   default="0.05"/>
+    <arg name="lidar_ransac_distance_threshold"   default="0.03"/>
     <arg name="lidar_ransac_iterations"           default="6"/>
-    <arg name="lidar_min_ransac_pointcloud_size"  default="15"/>
+    <arg name="lidar_min_ransac_pointcloud_size"  default="50"/>
         <!-- Radar -->
     <arg name="radar_ransac_distance_threshold"   default="0.05"/>
-    <arg name="radar_ransac_iterations"           default="6"/>
+    <arg name="radar_ransac_iterations"           default="0"/> <!-- Set to 0 to disable-->
     <arg name="radar_min_ransac_pointcloud_size"  default="15"/>
 
     <!-- Third step -->
     <arg name="beta"                              default="0.2"/> <!-- According to paper, beta varies between 0 and 1 -->
-    <arg name="distance_threshold"                default="0.2"/> <!-- Parameter dF of the paper -->
+    <arg name="distance_threshold"                default="0.5"/> <!-- Parameter dF of the paper -->
 
     <!-- Radar and Lidar standard deviations -->
     <arg name="radar_dev"                         default="0.03"/> 
