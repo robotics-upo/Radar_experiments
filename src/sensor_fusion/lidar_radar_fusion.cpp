@@ -16,6 +16,9 @@
 #include <message_filters/sync_policies/approximate_time.h>
 
 #include <pcl_ros/transforms.h>
+#include <dynamic_reconfigure/server.h>
+#include <radar_experiments/LidarFusionConfig.h>
+
 class LidarRadarFuser
 {
 
@@ -41,6 +44,12 @@ public:
 
         overlapping_dist_pub_       = pnh_.advertise<std_msgs::Float32>("overlapping_distance", 1);
         
+        dynamic_reconf_server_.reset(new dynamic_reconfigure::Server<radar_experiments::LidarFusionConfig>);
+        dynamic_recong_cb_f_.reset(new   dynamic_reconfigure::Server<radar_experiments::LidarFusionConfig>::CallbackType);
+
+        *dynamic_recong_cb_f_ = boost::bind(&LidarRadarFuser::dynamicReconfigureCallback, this, _1, _2);
+        dynamic_reconf_server_->setCallback(*dynamic_recong_cb_f_);
+
         //Params....
         pnh_.param("yaw_tolerance", yaw_tolerance_, 0.1);
         pnh_.param("ransac_distance_threshold", ransac_distance_threshold_, 0.01);
@@ -387,6 +396,22 @@ private:
 
         return *out_cloud;
     }
+    void dynamicReconfigureCallback(radar_experiments::LidarFusionConfig &config, uint32_t level){
+        if(first){
+            first = false;
+            return;
+        }
+        yaw_tolerance_              = config.yaw_tolerance;
+        ransac_distance_threshold_  = config.ransac_distance_threshold;
+        beta_                       = config.beta;
+        d_f_                        = config.distance_threshold;
+        time_tolerance_             = config.time_tolerance;
+        radar_dev_                  = config.radar_dev;
+        lidar_dev_                  = config.lidar_dev;
+        ransac_iterations_          = config.ransac_iterations;
+        min_ransac_pointcloud_size_ = config.min_ransac_pointcloud_size;
+        ROS_INFO("Dynamic reconfigure called!");
+    }
    
     
     //
@@ -406,6 +431,10 @@ private:
     ros::Publisher  lidar_points_cloud_pub_;
     ros::Publisher  final_points_cloud_pub_;
     tf::TransformListener tf_listener_;
+
+    std::unique_ptr<dynamic_reconfigure::Server<radar_experiments::LidarFusionConfig>> dynamic_reconf_server_;
+    std::unique_ptr<dynamic_reconfigure::Server<radar_experiments::LidarFusionConfig>::CallbackType> dynamic_recong_cb_f_;
+    bool first{true}; //Used to detect the init of the server, when it is initialized it calls the callback at the startup and overrides the launch params(whe dont want this)
 
     pcl::PointCloud<pcl::PointXYZ> last_radar_cloud_;
     pcl::PointCloud<pcl::PointXYZ> last_lidar_cloud_;

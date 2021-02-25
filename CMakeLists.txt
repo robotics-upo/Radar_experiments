@@ -14,6 +14,8 @@ find_package(catkin REQUIRED COMPONENTS
   # gather_data
   # image_transport
   # mcl3d
+  dynamic_reconfigure
+
   roscpp
   rospy
   sensor_msgs
@@ -97,10 +99,9 @@ find_package(PCL REQUIRED)
 ##     and list every .cfg file to be processed
 
 ## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
-#   cfg/DynReconf1.cfg
-#   cfg/DynReconf2.cfg
-# )
+generate_dynamic_reconfigure_options(
+  cfg/LidarFusion.cfg
+)
 
 ###################################
 ## catkin specific configuration ##
@@ -154,7 +155,7 @@ add_dependencies(lidar_std_dev_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin
 
 add_executable(lidar_radar_fusion_node src/sensor_fusion/lidar_radar_fusion.cpp)
 target_link_libraries(lidar_radar_fusion_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
-add_dependencies(lidar_radar_fusion_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(lidar_radar_fusion_node ${PROJECT_NAME}_gencfg ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 #############
 ## Install ##
 #############

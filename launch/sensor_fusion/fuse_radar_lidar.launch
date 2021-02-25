@@ -2,13 +2,14 @@
 
     <param name="use_sim_time" value="true"/>
 
-    <arg name="launch_static_tf" default="true"/>
-    <arg name="play_bag"         default="true"/>
-    <arg name="sec"              default="1"/>
-    <arg name="rate"             default="1"/>
+    <arg name="launch_static_tf"       default="true"/>
+    <arg name="launch_rqt_reconfigure" default="true"/>
+    <arg name="play_bag"               default="true"/>
+    <arg name="sec"                    default="1"/>
+    <arg name="rate"                   default="1"/>
 
-    <arg name="bag_name"         default="2020-12-01-11-36-21_nocams"/>
-    <arg name="bag_file"         default="$(env HOME)/radar_fusion_bags/$(arg bag_name).bag"/>
+    <arg name="bag_name"               default="2020-12-01-11-36-21_nocams"/>
+    <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name).bag"/>
     
     <node name="bag_player" type="play" pkg="rosbag" 
           args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) -q -l" 
@@ -80,7 +81,7 @@
     </node>
 
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find radar_experiments)/rviz/fuse_sensors.rviz"/>
-
+    <node pkg="rqt_reconfigure" name="rqt_reconfigure" type="rqt_reconfigure" if="$(arg launch_rqt_reconfigure)"/>
     <!-- Static TFs -->
 
     <arg name="pi"   value="3.141592654"/>
