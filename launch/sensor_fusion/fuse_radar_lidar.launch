@@ -87,12 +87,29 @@
         <param name="radar_dev"                          value="$(arg radar_dev)"/>
         <param name="lidar_dev"                          value="$(arg lidar_dev)"/>
     </node>
+    
+    <arg name="pi"   value="3.141592654"/>
+    
+    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
+        <remap from="cloud_in"            to="/lidar_radar_fusion_node/final_result_cloud"/>
+        <remap from="scan"                to="/lidar_radar_fusion_node/result_laser_scan"/>
+        <param name="min_height"          value="-1.0"/>
+        <param name="max_height"          value="1.0"/>
+        <param name="angle_min"           value="$(eval -1*arg('pi'))"/>
+        <param name="angle_max"           value="$(eval arg('pi'))"/>
+        <!-- <param name="angle_increment"     value="$(arg"/> -->
+        <param name="queue_size"          value="1"/>
+        <param name="scan_time"           value="0.1"/>
+        <param name="range_min"           value="0.5"/>
+        <param name="range_max"           value="120"/>
+        <param name="target_frame"        value="os1_lidar"/>
+        <param name="transform_tolerance" value="0.5"/>
+    </node>
 
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find radar_experiments)/rviz/fuse_sensors.rviz"/>
     <node pkg="rqt_reconfigure" name="rqt_reconfigure" type="rqt_reconfigure" if="$(arg launch_rqt_reconfigure)"/>
     <!-- Static TFs -->
 
-    <arg name="pi"   value="3.141592654"/>
     <arg name="pi/2" value="1.5707963267948966"/>
 
     <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="os1_sensor_broadcaster" args="0.1 0 0.40 0 0 0               base_link  os1_sensor             10"/>

@@ -21,6 +21,7 @@ The launch file come with a default position in the attached map, but it happens
     
 - Cloud concatenator: https://github.com/robotics-upo/cloud_concatenator
 - pcl_ros: ```sudo apt install ros-$ROS_DISTRO-pcl-ros```
+- pointcloud_to_laser_scan ```sudo apt install ros-$ROS_DISTRO-pointcloud-to-laserscan```
 
 To test the radar and lidar fusion node you will need a dataset. You can download [here](https://www.dropbox.com/s/qr5nr5gbng1jflh/2020-12-01-13-21-03.bag?dl=0) a bag containing pointcloud and radar data from December experiments. Download to your home folder and launch the main launch as it follows:
 
@@ -37,13 +38,14 @@ The implementation steps are detailed in the document docs/Lidar_and_radar_fusio
 Related to the algorithms:
 
 - yaw_tolerance : Used to extract 2d virtual scans
-- ransac_distance_threshold
-- ransac_iterations
-- min_ransac_pointcloud_size
+- ransac_distance_threshold (for both lidar and radar)
+- ransac_iterations (for both lidar and radar)
+- min_ransac_pointcloud_size (for both lidar and radar)
 - beta
 - distance_threshold
 - lidar_dev
 - radar_dev
+- lidar_max_range
 
 Related to node:
 
