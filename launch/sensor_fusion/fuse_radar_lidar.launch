@@ -7,14 +7,14 @@
     <arg name="sec"              default="1"/>
     <arg name="rate"             default="1"/>
 
-    <arg name="bag_name"         default="2020-12-01-10-45-22_nocams"/>
+    <arg name="bag_name"         default="2020-12-01-11-36-21_nocams"/>
     <arg name="bag_file"         default="$(env HOME)/radar_fusion_bags/$(arg bag_name).bag"/>
     
     <node name="bag_player" type="play" pkg="rosbag" 
           args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) -q -l" 
           output="screen" if="$(arg play_bag)"/>
 
-    <arg name="use_async_concatenator"      default="true"/>
+    <arg name="use_async_concatenator"      default="false"/>
     <arg name="radar_full_cloud_topic_name" default="radarConcatenatedCloud"/>
     
     <arg name="cloud_1" default="/ti_mmwave_front_radar/radar_scan_pcl"/>
@@ -57,7 +57,7 @@
 
     <!-- Third step -->
     <arg name="beta"                        default="0.2"/> <!-- According to paper, beta varies between 0 and 1 -->
-    <arg name="distance_threshold"          default="1.5"/> <!-- Parameter dF of the paper -->
+    <arg name="distance_threshold"          default="0.2"/> <!-- Parameter dF of the paper -->
 
     <!-- Radar and Lidar standard deviations -->
     <arg name="radar_dev"                   default="0.03"/> 
