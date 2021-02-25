@@ -155,7 +155,7 @@ private:
 
                     continue;
                 }
-                if( lidar_range.first > fused_range && lidar_range.first < lidar_max_range_ ){ //120 == infinity
+                if( lidar_range.first > overlapping_scan_field_r_f_ && lidar_range.first < lidar_max_range_ ){ //120 == infinity
                     if(std::find(lidar_ranges.begin(), lidar_ranges.end(), lidar_range) == lidar_ranges.end() )  
                         lidar_ranges.emplace_back(lidar_range);
 
@@ -168,11 +168,13 @@ private:
                     continue;
                 }
                 //! Radar Insertion conditions
-                if( lidar_range.first - radar_point_range < -1*d_f_){ //Caso radar un poco mas alejado que lidar
+                    //? Type I
+                if( lidar_range.first - radar_point_range < -1*d_f_ && radar_point_range < overlapping_scan_field_r_f_ ){ //Caso radar un poco mas alejado que lidar
                     std::pair<double, double> p(radar_point_range, pointYaw(it));
                     radar_ranges.emplace_back(p);
                     continue;
                 }
+                    //? Type II
                 if( lidar_range.first >= lidar_max_range_ && radar_point_range < lidar_max_range_ ){ //120 == infinity Caso lidar dando infinito(no se da?) 
                     std::pair<double, double> p(radar_point_range, pointYaw(it));                    //y punto de radar dando algo
                     radar_ranges.emplace_back(p);
@@ -194,7 +196,7 @@ private:
             }
         }
 
-        //Undo ranges calculation-> get x,y points coordinates
+        //Undo ranges calculation-> get x,y points coordinates from polar ones
 
          //Create cloud from fused ranges
         pcl::PointCloud<pcl::PointXYZ> result_cloud;

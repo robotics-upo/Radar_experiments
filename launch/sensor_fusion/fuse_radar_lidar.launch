@@ -57,11 +57,12 @@
 
     <!-- Third step -->
     <arg name="beta"                        default="0.2"/> <!-- According to paper, beta varies between 0 and 1 -->
-    <arg name="distance_threshold"          default="0.25"/> <!-- Parameter dF of the paper -->
+    <arg name="distance_threshold"          default="1.5"/> <!-- Parameter dF of the paper -->
 
     <!-- Radar and Lidar standard deviations -->
     <arg name="radar_dev"                   default="0.03"/> 
     <arg name="lidar_dev"                   default="0.02"/> 
+    <arg name="lidar_max_range"             default="120.0"/> <!-- Useful when lidar pointclouds publishes ranges with Inf values. Ouster lidar I think does not do-->
 
     <node name="lidar_radar_fusion_node" type="lidar_radar_fusion_node" pkg="radar_experiments" output="screen">
         <remap from="lidar_points"                 to="/os1_cloud_node/points_non_dense"/>
