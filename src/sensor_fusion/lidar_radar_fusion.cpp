@@ -383,6 +383,11 @@ private:
                                                    const int _ransac_iterations, const int _min_pointcloud_size, const double _ransac_distance_threshold)
     {
 
+        if(_ransac_iterations == 0){
+            ransac_result_pub_.publish(cloud);
+            return cloud;
+        }
+
         pcl::PointCloud<pcl::PointXYZ>::Ptr out_cloud(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::PointCloud<pcl::PointXYZ>::Ptr in_intermediate(new pcl::PointCloud<pcl::PointXYZ>);
         
@@ -416,7 +421,7 @@ private:
             extract.setNegative(true);
             extract.filter(*in_intermediate);
         }
-        
+
         out_cloud->header.frame_id = frame_id;
         ransac_result_pub_.publish(out_cloud);
 
