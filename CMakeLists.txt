@@ -15,7 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   # image_transport
   # mcl3d
   dynamic_reconfigure
-
+  nav_msgs
   roscpp
   rospy
   sensor_msgs

@@ -6,10 +6,10 @@
     <arg name="launch_rqt_reconfigure" default="true"/>
     <arg name="launch_mcl2d"           default="true"/>
     <arg name="play_bag"               default="true"/>
-    <arg name="sec"                    default="20"/>
+    <arg name="sec"                    default="50"/>
     <arg name="rate"                   default="1"/>
 
-    <arg name="bag_name"               default="2020-12-01-11-36-21_front_cam_nodomtf2"/>
+    <arg name="bag_name"               default="2020-12-01-10-45-22_front_cam_odomtf"/>
     <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name).bag"/>
     
     <node name="bag_player" type="play" pkg="rosbag" 
@@ -18,7 +18,7 @@
 
     <!--  MCL2D initial position -->
     <arg name="initial_pose_x"  default="6.1"/>
-    <arg name="initial_pose_y"  default="5"/>
+    <arg name="initial_pose_y"  default="4.2"/>
     <arg name="initial_pose_a"  default="1.1"/>
 
     <arg name="use_async_concatenator"      default="false"/>
@@ -76,6 +76,11 @@
     <arg name="lidar_dev"                         default="0.02"/> 
     <arg name="lidar_max_range"                   default="120.0"/> <!-- Useful when lidar pointclouds publishes ranges with Inf values. Ouster lidar I think does not do-->
 
+    <arg name="enable_radar_enhancement"          default="false"/>
+    <arg name="fuse_only_enhaced_radar"           default="false"/> 
+    <arg name="max_radar_acc_yaw_incr"            default="0.4"/> 
+    <arg name="max_radar_acc_time"                default="2.5"/> 
+
     <node name="lidar_radar_fusion_node" type="lidar_radar_fusion_node" pkg="radar_experiments" output="screen">
         <remap from="lidar_points"                       to="/os1_cloud_node/points_non_dense"/>
         <remap from="radar_points"                       to="/$(arg radar_full_cloud_topic_name)"/>
@@ -91,7 +96,10 @@
         <param name="sychronization_margin"              value="$(arg sychronization_margin)"/>
         <param name="time_tolerance"                     value="$(arg time_tolerance)"/>
         <param name="radar_dev"                          value="$(arg radar_dev)"/>
-        <param name="lidar_dev"                          value="$(arg lidar_dev)"/>
+        <param name="enable_radar_enhancement"           value="$(arg enable_radar_enhancement)"/>
+        <param name="fuse_only_enhaced_radar"            value="$(arg fuse_only_enhaced_radar)"/>
+        <param name="max_radar_acc_yaw_incr"             value="$(arg max_radar_acc_yaw_incr)"/>
+        <param name="max_radar_acc_time"                 value="$(arg max_radar_acc_time)"/>
     </node>
     
     <arg name="pi"   value="3.141592654"/>
@@ -129,23 +137,23 @@
       <param name="initial_pose_y"            value="$(arg initial_pose_y)"/>
       <param name="initial_pose_a"            value="$(arg initial_pose_a)"/>
       <param name="odom_model_type"           value="diff"/>
-      <param name="odom_alpha5"               value="0.1"/>
       <param name="transform_tolerance"       value="0.2" />
       <param name="gui_publish_rate"          value="10.0"/>
-      <param name="laser_max_beams"           value="30"/>
+      <param name="laser_max_beams"           value="60"/>
       <param name="min_particles"             value="500"/>
       <param name="max_particles"             value="5000"/>
       <param name="kld_err"                   value="0.05"/>
       <param name="kld_z"                     value="0.99"/>
-      <param name="odom_alpha1"               value="0.2"/>
+      <param name="odom_alpha1"               value="0.5"/>
       <param name="odom_alpha2"               value="0.2"/>
       <!-- translation std dev, m -->
-      <param name="odom_alpha3"               value="0.8"/>
-      <param name="odom_alpha4"               value="0.2"/>
+      <param name="odom_alpha3"               value="0.05"/>
+      <param name="odom_alpha4"               value="0.05"/>
+      <param name="odom_alpha5"               value="0.1"/>
       <param name="laser_z_hit"               value="0.5"/>
       <param name="laser_z_short"             value="0.05"/>
       <param name="laser_z_max"               value="0.05"/>
-      <param name="laser_z_rand"              value="0.5"/>
+      <param name="laser_z_rand"              value="0.8"/>
       <param name="laser_sigma_hit"           value="0.2"/>
       <param name="laser_lambda_short"        value="0.1"/>
       <param name="laser_lambda_short"        value="0.1"/>
@@ -156,7 +164,7 @@
       <param name="update_min_a"              value="0.5"/>
       <param name="odom_frame_id"             value="odom"/>
       <param name="resample_interval"         value="1"/>
-      <param name="transform_tolerance"       value="0.5"/>
+      <param name="transform_tolerance"       value="0.1"/>
       <param name="recovery_alpha_slow"       value="0.0"/>
       <param name="recovery_alpha_fast"       value="0.0"/>
     </node>
@@ -169,11 +177,11 @@
 
     <arg name="pi/2" value="1.5707963267948966"/>
 
-    <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="os1_sensor_broadcaster" args="0.1 0 0.40 0 0 0               base_link  os1_sensor             10"/>
-    <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="tf_lidar"               args="0 0.0 0.03618 3.14 0.0 0.0     os1_sensor os1_lidar             10"/>
-    <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="tf_radar_front"         args="0.09 0.04 -0.08 0 0 0          os1_sensor ti_mmwave_front_radar 10"/>
-    <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="tf_radar_rear"          args="-0.33 0.05 -0.2 $(arg pi) 0 0  os1_sensor ti_mmwave_rear_radar  10"/>
-    <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="tf_radar_right"         args="0 -0.05 -0.05 -$(arg pi/2) 0 0 os1_sensor ti_mmwave_right_radar 10"/>
-    <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="tf_radar_left"          args="0 0.05 -0.05 $(arg pi/2) 0 0   os1_sensor ti_mmwave_left_radar  10"/>
+    <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="os1_sensor_broadcaster" args="0.1 0 0.40 0 0 0               base_link  os1_sensor            2"/>
+    <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="tf_lidar"               args="0 0.0 0.03618 3.14 0.0 0.0     os1_sensor os1_lidar             2"/>
+    <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="tf_radar_front"         args="0.09 0.04 -0.08 0 0 0          os1_sensor ti_mmwave_front_radar 2"/>
+    <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="tf_radar_rear"          args="-0.33 0.05 -0.2 $(arg pi) 0 0  os1_sensor ti_mmwave_rear_radar  2"/>
+    <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="tf_radar_right"         args="0 -0.05 -0.05 -$(arg pi/2) 0 0 os1_sensor ti_mmwave_right_radar 2"/>
+    <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="tf_radar_left"          args="0 0.05 -0.05 $(arg pi/2) 0 0   os1_sensor ti_mmwave_left_radar  2"/>
 
 </launch>
