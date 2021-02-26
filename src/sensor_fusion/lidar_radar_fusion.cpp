@@ -283,6 +283,7 @@ private:
                   <<" Lidar: " << lidar_points_cloud.points.size()  
                   <<" Fused: " << fused_points_cloud.points.size() << std::endl;
         //Put all three clouds together       
+        pcl_conversions::toPCL(ros::Time::now(), result_cloud.header.stamp);
         final_points_cloud_pub_.publish(result_cloud);
 
         return result_cloud;

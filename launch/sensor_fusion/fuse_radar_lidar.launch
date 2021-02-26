@@ -6,10 +6,10 @@
     <arg name="launch_rqt_reconfigure" default="true"/>
     <arg name="launch_mcl2d"           default="true"/>
     <arg name="play_bag"               default="true"/>
-    <arg name="sec"                    default="1"/>
+    <arg name="sec"                    default="20"/>
     <arg name="rate"                   default="1"/>
 
-    <arg name="bag_name"               default="2020-12-01-11-36-21_nocams"/>
+    <arg name="bag_name"               default="2020-12-01-11-36-21_front_cam_nodomtf2"/>
     <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name).bag"/>
     
     <node name="bag_player" type="play" pkg="rosbag" 
@@ -17,8 +17,8 @@
           output="screen" if="$(arg play_bag)"/>
 
     <!--  MCL2D initial position -->
-    <arg name="initial_pose_x"  default="100"/>
-    <arg name="initial_pose_y"  default="97"/>
+    <arg name="initial_pose_x"  default="6.1"/>
+    <arg name="initial_pose_y"  default="5"/>
     <arg name="initial_pose_a"  default="1.1"/>
 
     <arg name="use_async_concatenator"      default="false"/>
@@ -124,40 +124,41 @@
 
     <node pkg="amcl" type="amcl" name="amcl" output="screen" if="$(arg launch_mcl2d)">
       <!-- Publish scans from best pose at a max of 10 Hz -->
-      <param name="initial_pose_x"  value="$(arg initial_pose_x)"/>
-      <param name="initial_pose_y"  value="$(arg initial_pose_y)"/>
-      <param name="initial_pose_a"  value="$(arg initial_pose_a)"/>
-      <param name="odom_model_type" value="diff"/>
-      <param name="odom_alpha5" value="0.1"/>
-      <param name="transform_tolerance" value="0.2" />
-      <param name="gui_publish_rate" value="10.0"/>
-      <param name="laser_max_beams" value="30"/>
-      <param name="min_particles" value="500"/>
-      <param name="max_particles" value="5000"/>
-      <param name="kld_err" value="0.05"/>
-      <param name="kld_z" value="0.99"/>
-      <param name="odom_alpha1" value="0.2"/>
-      <param name="odom_alpha2" value="0.2"/>
+      <remap from="scan"                      to="/lidar_radar_fusion_node/result_laser_scan"/>
+      <param name="initial_pose_x"            value="$(arg initial_pose_x)"/>
+      <param name="initial_pose_y"            value="$(arg initial_pose_y)"/>
+      <param name="initial_pose_a"            value="$(arg initial_pose_a)"/>
+      <param name="odom_model_type"           value="diff"/>
+      <param name="odom_alpha5"               value="0.1"/>
+      <param name="transform_tolerance"       value="0.2" />
+      <param name="gui_publish_rate"          value="10.0"/>
+      <param name="laser_max_beams"           value="30"/>
+      <param name="min_particles"             value="500"/>
+      <param name="max_particles"             value="5000"/>
+      <param name="kld_err"                   value="0.05"/>
+      <param name="kld_z"                     value="0.99"/>
+      <param name="odom_alpha1"               value="0.2"/>
+      <param name="odom_alpha2"               value="0.2"/>
       <!-- translation std dev, m -->
-      <param name="odom_alpha3" value="0.8"/>
-      <param name="odom_alpha4" value="0.2"/>
-      <param name="laser_z_hit" value="0.5"/>
-      <param name="laser_z_short" value="0.05"/>
-      <param name="laser_z_max" value="0.05"/>
-      <param name="laser_z_rand" value="0.5"/>
-      <param name="laser_sigma_hit" value="0.2"/>
-      <param name="laser_lambda_short" value="0.1"/>
-      <param name="laser_lambda_short" value="0.1"/>
-      <param name="laser_model_type" value="likelihood_field"/>
+      <param name="odom_alpha3"               value="0.8"/>
+      <param name="odom_alpha4"               value="0.2"/>
+      <param name="laser_z_hit"               value="0.5"/>
+      <param name="laser_z_short"             value="0.05"/>
+      <param name="laser_z_max"               value="0.05"/>
+      <param name="laser_z_rand"              value="0.5"/>
+      <param name="laser_sigma_hit"           value="0.2"/>
+      <param name="laser_lambda_short"        value="0.1"/>
+      <param name="laser_lambda_short"        value="0.1"/>
+      <param name="laser_model_type"          value="likelihood_field"/>
       <!-- <param name="laser_model_type" value="beam"/> -->
       <param name="laser_likelihood_max_dist" value="2.0"/>
-      <param name="update_min_d" value="0.2"/>
-      <param name="update_min_a" value="0.5"/>
-      <param name="odom_frame_id" value="odom"/>
-      <param name="resample_interval" value="1"/>
-      <param name="transform_tolerance" value="0.1"/>
-      <param name="recovery_alpha_slow" value="0.0"/>
-      <param name="recovery_alpha_fast" value="0.0"/>
+      <param name="update_min_d"              value="0.2"/>
+      <param name="update_min_a"              value="0.5"/>
+      <param name="odom_frame_id"             value="odom"/>
+      <param name="resample_interval"         value="1"/>
+      <param name="transform_tolerance"       value="0.5"/>
+      <param name="recovery_alpha_slow"       value="0.0"/>
+      <param name="recovery_alpha_fast"       value="0.0"/>
     </node>
 
     <node pkg="raposa_marker" type="raposa_marker" name="raposa_marker"/>

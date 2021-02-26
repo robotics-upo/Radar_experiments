@@ -297,6 +297,8 @@ Visualization Manager:
         All Enabled: true
         base_link:
           Value: true
+        odom:
+          Value: true
         os1_lidar:
           Value: true
         os1_sensor:
@@ -327,6 +329,8 @@ Visualization Manager:
               {}
             ti_mmwave_right_radar:
               {}
+        odom:
+          {}
       Update Interval: 0
       Value: true
     - Alpha: 0.699999988079071
@@ -360,14 +364,14 @@ Visualization Manager:
       Marker Topic: /raposa_marker
       Name: RaposaMarker
       Namespaces:
-        raposa: true
+        {}
       Queue Size: 100
       Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: os1_lidar
+    Fixed Frame: map
     Frame Rate: 30
   Name: root
   Tools:
