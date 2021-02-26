@@ -263,6 +263,7 @@ private:
             fused_points_cloud.push_back(p);
             result_cloud.push_back(p);
         }
+        pcl_conversions::toPCL(ros::Time::now(), fused_points_cloud.header.stamp);
         fused_points_cloud_pub_.publish(fused_points_cloud);
         //Undo radar ranges cloud
         for(auto &it: radar_ranges){
@@ -270,14 +271,15 @@ private:
             radar_points_cloud.push_back(p);
             result_cloud.push_back(p);
         }
+        pcl_conversions::toPCL(ros::Time::now(), radar_points_cloud.header.stamp);
         radar_points_cloud_pub_.publish(radar_points_cloud);
-
         //Undo lidar ranges cloud
         for(auto &it: lidar_ranges){
             fromPolarToXY(it, p);
             lidar_points_cloud.push_back(p);
             result_cloud.push_back(p);
         }
+        pcl_conversions::toPCL(ros::Time::now(), lidar_points_cloud.header.stamp);
         lidar_points_cloud_pub_.publish(lidar_points_cloud);
         std::cout <<"Radar contributions: " << radar_points_cloud.points.size()
                   <<" Lidar: " << lidar_points_cloud.points.size()  
@@ -382,6 +384,7 @@ private:
                 // std::cout << "[" << it.x << ", " << it.y << ", "<< yaw << "]"  << std::endl;
             }
         }
+        pcl_conversions::toPCL(ros::Time::now(), out.header.stamp);
         virtual_2d_pointcloud_pub_.publish(out);
 
         return out;
@@ -392,6 +395,7 @@ private:
     {
 
         if(_ransac_iterations == 0){
+            pcl_conversions::toPCL(ros::Time::now(), cloud.header.stamp);
             ransac_result_pub_.publish(cloud);
             return cloud;
         }
@@ -431,6 +435,7 @@ private:
         }
 
         out_cloud->header.frame_id = frame_id;
+        pcl_conversions::toPCL(ros::Time::now(), out_cloud.header.stamp);
         ransac_result_pub_.publish(out_cloud);
 
         return *out_cloud;
