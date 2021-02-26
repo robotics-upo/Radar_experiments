@@ -193,7 +193,7 @@ private:
             pcl::PointCloud<pcl::PointXYZI> radar_acc_ransac_result_cloud;
             auto interm_cloud = processRadar(acc_radar_clouds_, acc_radar_clouds_.header.frame_id);
             std::cout << "Interm cloud timestamp: " << interm_cloud.header.stamp << std::endl;
-            interm_cloud.header.stamp -=  100000;
+            interm_cloud.header.stamp -=  100000; //! This magic is done to avoid extrapolation into the future TF ERROR (dont know why it happens)
             pcl_ros::transformPointCloud(lidar_msg->header.frame_id, interm_cloud, radar_acc_ransac_result_cloud,tf_listener_);
             radar_acc_ransac_result_cloud.header.frame_id = lidar_msg->header.frame_id;
             pcl_conversions::toPCL(ros::Time::now(), radar_acc_ransac_result_cloud.header.stamp);
@@ -293,7 +293,10 @@ private:
                 radar_ranges.emplace_back(p);
             }
         }
-
+        if(radar_cloud.empty()){
+            for(const auto &it: lidar_ranges_polar_coord_map)
+                lidar_ranges.push_back(it.second);
+        }
         //Undo ranges calculation-> get x,y points coordinates from polar ones
 
          //Create cloud from fused ranges
