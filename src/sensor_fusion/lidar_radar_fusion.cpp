@@ -88,6 +88,14 @@ public:
         pnh_.param("odom_frame_id", odom_frame_id_, (std::string)"odom");
         pnh_.param("robot_base_frame_id", robot_base_frame_id_, (std::string)"base_link");
 
+        double yaw_res_deg, azim_res_deg;
+        pnh_.param("inflate_radar_points_with_resolution", inflate_radar_points_from_angular_resolution_, false);
+        pnh_.param("angular_resolution_yaw", yaw_res_deg, 10.0);
+        pnh_.param("angular_resolution_azimuth", azim_res_deg, 10.0);
+        pnh_.param("point_step", point_step_, 0.03);
+        radar_angular_resolution_azimuth_ = azim_res_deg / 180 * M_PI;
+        radar_angular_resolution_yaw_     = yaw_res_deg  / 180 * M_PI;
+
         std::cout << "\033[1;31m\n---------------------------------------------\033[0m" << std::endl 
                   << "Lidar - Radar Scans Fuser Params:    " <<std::endl << std::endl
                   << "\tSynchronization Margin:            " << synch_margin_queue_ << std::endl
@@ -105,7 +113,10 @@ public:
                   << "\tAcc. Radar Enabled:                " << std::boolalpha << enable_radar_enhancement_ << std::endl
                   << "\tAcc. Radar Fuse only Acc Radar:    " << fuse_only_enhaced_radar_ << std::endl
                   << "\tAcc. Radar Max Yaw Diff:           " << max_radar_acc_yaw_incr_ << std::endl
-                  << "\tAcc. Radar Max Time Tolerance:     " << max_radar_acc_time_ << std::endl
+                  << "\tInflate Radar Using Ang. Res:      " << inflate_radar_points_from_angular_resolution_ << std::endl
+                  << "\tAngular Resolution Yaw (deg):      " << radar_angular_resolution_yaw_ << std::endl
+                  << "\tAngular Resolution Azimuth (deg):  " << radar_angular_resolution_azimuth_ << std::endl
+                  << "\tAngular inflation points step(m):  " << point_step_ << std::endl
                   << "\tBase Frame ID:                     " << robot_base_frame_id_ << std::endl
                   << "\tOdom Frame ID:                     " << odom_frame_id_ << std::endl
                   << "\033[1;31m---------------------------------------------\033[0m" << std::endl;
@@ -126,11 +137,14 @@ public:
 private:
     template<typename T=pcl::PointXYZI>
     pcl::PointCloud<T> processRadar(pcl::PointCloud<T> &points, const std::string _frame_id){
-        
+        typename pcl::PointCloud<T> int_cloud = points;
+        if(inflate_radar_points_from_angular_resolution_){
+            inflateRadarScanByResolution(int_cloud);
+        }
         std::vector<double> dist_vector;
         maximum_range_radar_measurement = 0;
         double range;
-        for (auto &it : points){
+        for (auto &it : int_cloud){
             range = dist2Origin(it);
             dist_vector.push_back(range);
             if(range > maximum_range_radar_measurement) maximum_range_radar_measurement = range;
@@ -143,7 +157,7 @@ private:
         overlapping_dist.data = overlapping_scan_field_r_f_;
         overlapping_dist_pub_.publish(overlapping_dist);
 
-        return applyLineRANSAC(points, _frame_id, ransac_iterations_radar_, min_ransac_pointcloud_size_radar_, ransac_distance_threshold_radar_);
+        return applyLineRANSAC(int_cloud, _frame_id, ransac_iterations_radar_, min_ransac_pointcloud_size_radar_, ransac_distance_threshold_radar_);
     }   
     
     void processLidar(const pcl::PointCloud<pcl::PointXYZ> &points, const std::string _frame_id)
@@ -219,10 +233,17 @@ private:
         std::cout<< "Ransac result cloud size: " << lidar_ransac_result_cloud_.points.size() <<std::endl; 
         int i = 0;
         std::pair<int, std::pair<double,double>> temp_pair(0,std::pair<double,double>(0,0));
+        // std::pair<int, std::pair<double,double>> temp_pair(0,std::pair<double,double>(lidar_max_range_ + 1,0));
+        //for(int j = 0; j < std::floor(360/yaw_tolerance_); ++j){
+        //    temp_pair.first = j;
+        //    lidar_ranges_polar_coord_map.insert(temp_pair);
+        //}
+        temp_pair.first = 0;
         for(auto &it: lidar_cloud){//TODO RE THINK ON HOW TO BUILD THIS LIDAR RANGES POLAR COORD MAP (IS LIKE A SENSOR MSG LASER SCAN)
             ++temp_pair.first;      //I think it's better to build a full scan initialized with all the points at inf. 
             temp_pair.second = xyToPolar(it); //And after all replace the inf points but the existing values, but the result scan 
-            lidar_ranges_polar_coord_map.insert(temp_pair);
+            lidar_ranges_polar_coord_map[temp_pair.first] =  temp_pair.second;
+            // lidar_ranges_polar_coord_map.insert(temp_pair);
         }
 
         if( lidar_ranges_polar_coord_map.empty() ) ROS_WARN("Lidar Cloud empty!!!");
@@ -235,6 +256,7 @@ private:
         double radar_point_range;        
         double fused_range;
         //TODO There are repeated points pushed inside the final container. FIX
+        
         for(auto &it: radar_cloud){
             radar_point_range = dist2Origin(it);
             if(lidar_ranges_polar_coord_map.empty()) break; //If no lidar cloud, exit and fill the result cloud with the radar poinnts
@@ -494,6 +516,48 @@ private:
 
         return *out_cloud;
     }
+    //! This functions takes points from a PointCloud and inflated in SPHERICAL coordinates along
+    //! the yaw (theta) and elevation(phi) angles resulting in a "spherical shell inflation"
+    //! Other possibility is to put all them into a plane
+    template<typename T>
+    void inflateRadarScanByResolution(pcl::PointCloud<T> &in_cloud){
+        //TODO How to check if there is intensity field and forward it?
+        std::cout<< "Inflating Cloud of size: "<< in_cloud.points.size() << std::endl;
+        T point;
+        int k1; //Yaw(theta)
+        int k2; //Azimuth (phi)
+        double theta, phi, rho;
+        double theta_n, phi_n;
+        
+        for(auto &it: in_cloud){
+            theta = atan2(it.y, it.x);
+            phi  = atan2(it.z, it.x);
+            rho = dist2Origin(it);
+            k1 = std::fabs(std::round(2*rho*sin(theta) / point_step_));
+            k2 = std::fabs(std::round(2*rho*sin(phi) / point_step_));
+            if(k1 % 2 != 0) k1 += 1; 
+            if(k2 % 2 != 0) k2 += 1; 
+            if(k1 < 2) k1 = 2;
+            if(k2 < 2) k2 = 2;
+            std::cout << "K1, K2, Rho: [" << k1 << ", " << k2 << ", " << rho << "] " <<std::endl;
+            for(int i = 0; i < k1; i++ ){
+                theta_n = theta - radar_angular_resolution_yaw_/2 + i * radar_angular_resolution_yaw_/k1;
+                std::cout << "Theta_n:" << theta_n << std::endl;
+                
+                for(int j = 0; j < k2; j++ ){
+                    std::cout << "j / k" << j << "/ " << k2 << "  Phi_n:" << phi_n << std::endl;
+                    phi_n   = phi  - radar_angular_resolution_azimuth_/2 + j* radar_angular_resolution_azimuth_/k2;
+                    point.x = rho * sin(phi_n) * cos(theta_n);
+                    point.y = rho * sin(phi_n) * sin(theta_n);
+                    point.z = rho * cos(phi_n);
+                    in_cloud.points.push_back(point);   
+                    // std::cout << "Adding [" << point.x << ", " << point.y << "," << point.z << "] to [" << it.x << ", " << it.y << "," << it.z << "]" << std::endl;
+                    
+                }
+            }
+        }
+
+    }
     void dynamicReconfigureCallback(radar_experiments::LidarFusionConfig &config, uint32_t level){
         if(first){
             first = false;
@@ -620,6 +684,10 @@ private:
     std::ofstream radar_data_file_;
     bool save_radar_data_{false};
 
+    bool inflate_radar_points_from_angular_resolution_;
+    double radar_angular_resolution_yaw_;
+    double radar_angular_resolution_azimuth_;
+    double point_step_;
 };
 int main(int argc, char **argv)
 {
