@@ -44,6 +44,7 @@ public:
         lidar_points_cloud_pub_     = pnh_.advertise<pcl::PointCloud<pcl::PointXYZ>>("lidar_ranges_cloud", 1);
         final_points_cloud_pub_     = pnh_.advertise<pcl::PointCloud<pcl::PointXYZ>>("final_result_cloud", 1);
         accumulated_radar_cloud_pub_= pnh_.advertise<pcl::PointCloud<pcl::PointXYZI>>("accumulated_radar_cloud", 1);
+        inflated_radar_cloud_pub_   = pnh_.advertise<pcl::PointCloud<pcl::PointXYZI>>("inflated_radar_cloud", 1);
 
         overlapping_dist_pub_       = pnh_.advertise<std_msgs::Float32>("overlapping_distance", 1);
         
@@ -531,12 +532,12 @@ private:
         
         for(auto &it: in_cloud){
             theta = atan2(it.y, it.x);
-            phi  = atan2(it.z, it.x);
             rho = dist2Origin(it);
-            k1 = std::fabs(std::round(2*rho*sin(theta) / point_step_));
-            k2 = std::fabs(std::round(2*rho*sin(phi) / point_step_));
-            if(k1 % 2 != 0) k1 += 1; 
-            if(k2 % 2 != 0) k2 += 1; 
+            phi  = acos(it.z/rho);
+            k1 = std::fabs(std::round(2*rho*sin(radar_angular_resolution_yaw_) / point_step_));
+            k2 = std::fabs(std::round(2*rho*sin(radar_angular_resolution_azimuth_) / point_step_));
+            if(k1 % 2 != 0) k1 -= 1; 
+            if(k2 % 2 != 0) k2 -= 1; 
             if(k1 < 2) k1 = 2;
             if(k2 < 2) k2 = 2;
             std::cout << "K1, K2, Rho: [" << k1 << ", " << k2 << ", " << rho << "] " <<std::endl;
@@ -547,15 +548,17 @@ private:
                 for(int j = 0; j < k2; j++ ){
                     std::cout << "j / k" << j << "/ " << k2 << "  Phi_n:" << phi_n << std::endl;
                     phi_n   = phi  - radar_angular_resolution_azimuth_/2 + j* radar_angular_resolution_azimuth_/k2;
-                    point.x = rho * sin(phi_n) * cos(theta_n);
-                    point.y = rho * sin(phi_n) * sin(theta_n);
-                    point.z = rho * cos(phi_n);
+                    point.x = rho * sin(phi_n ) * cos(theta_n);
+                    point.y = rho * sin(phi_n ) * sin(theta_n);
+                    point.z = rho * cos(phi_n );
                     in_cloud.points.push_back(point);   
                     // std::cout << "Adding [" << point.x << ", " << point.y << "," << point.z << "] to [" << it.x << ", " << it.y << "," << it.z << "]" << std::endl;
                     
                 }
             }
         }
+        pcl_conversions::toPCL(ros::Time::now(), in_cloud.header.stamp);
+        inflated_radar_cloud_pub_.publish(in_cloud);
 
     }
     void dynamicReconfigureCallback(radar_experiments::LidarFusionConfig &config, uint32_t level){
@@ -629,6 +632,7 @@ private:
     ros::Publisher  lidar_points_cloud_pub_;
     ros::Publisher  final_points_cloud_pub_;
     ros::Publisher  accumulated_radar_cloud_pub_;
+    ros::Publisher  inflated_radar_cloud_pub_;
     tf::TransformListener tf_listener_;
 
     std::unique_ptr<dynamic_reconfigure::Server<radar_experiments::LidarFusionConfig>> dynamic_reconf_server_;
