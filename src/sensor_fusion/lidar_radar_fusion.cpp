@@ -215,7 +215,7 @@ private:
             fused_scan_result_ = createFusedCloud(lidar_msg->header.frame_id, lidar_ransac_result_cloud_, radar_acc_ransac_result_cloud);
             std::cout<< "Publishing fused cloud with radar enahcement!" << radar_acc_ransac_result_cloud.points.size() << " /" << fused_scan_result_.points.size() << std::endl;
             insert_acc_radar_clouds_ = false;
-        }else if(!enable_radar_enhancement_ && !fuse_only_enhaced_radar_){
+        }else{
             radar_ransac_result_cloud_ = processRadar(last_radar_cloud_, radar_msg->header.frame_id);
             fused_scan_result_ = createFusedCloud(lidar_msg->header.frame_id, lidar_ransac_result_cloud_, radar_ransac_result_cloud_);
         }
