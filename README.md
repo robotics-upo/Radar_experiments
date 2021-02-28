@@ -25,6 +25,8 @@ The launch file come with a default position in the attached map, but it happens
 - raposa_marker: 
 - odom_to_tf
 
+You can downlaod the repository and execute ```./scripts/install_fusion_dependencies.sh``` it will install APT packages and downlaod necessary repos to avoid doing it manually. 
+
 To test the radar and lidar fusion node you will need a dataset. You can download [here](https://www.dropbox.com/s/qr5nr5gbng1jflh/2020-12-01-13-21-03.bag?dl=0) a bag containing pointcloud and radar data from December experiments. Download to your home folder and launch the main launch as it follows:
 
 ```

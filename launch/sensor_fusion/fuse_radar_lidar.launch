@@ -74,8 +74,8 @@
     <arg name="radar_min_ransac_pointcloud_size"        default="5"/>
 
     <!-- Third step -->
-    <arg name="beta"                                    default="0.8"/> <!-- According to paper, beta varies between 0 and 1 -->
-    <arg name="distance_threshold"                      default="0.3"/> <!-- Parameter dF of the paper -->
+    <arg name="beta"                                    default="0.5"/> <!-- According to paper, beta varies between 0 and 1 -->
+    <arg name="distance_threshold"                      default="0.1"/> <!-- Parameter dF of the paper -->
 
     <!-- Radar and Lidar standard deviations -->
     <arg name="radar_dev"                               default="0.03"/> 
@@ -85,13 +85,13 @@
     <arg name="enable_radar_enhancement"                default="false"/>
     <arg name="fuse_only_enhaced_radar"                 default="false"/> 
     <arg name="max_radar_acc_yaw_incr"                  default="0.4"/> 
-    <arg name="max_radar_acc_time"                      default="0.4"/> 
+    <arg name="max_radar_acc_time"                      default="0.5"/> 
 
     <!-- Radar Points inflation using angular resolutions -->
-    <arg name="inflate_radar_points_with_resolution"    default="false"/>
-    <arg name="angular_resolution_yaw"                  default="10.0"/>
-    <arg name="angular_resolution_azimuth"              default="10.0"/>
-    <arg name="point_step"                              default="0.1"/>
+    <arg name="inflate_radar_points_with_resolution"    default="true"/>
+    <arg name="angular_resolution_yaw"                  default="20.0"/>
+    <arg name="angular_resolution_azimuth"              default="20.0"/>
+    <arg name="point_step"                              default="0.05"/>
 
     <node name="lidar_radar_fusion_node" type="lidar_radar_fusion_node" pkg="radar_experiments" output="screen" > 
         <remap from="lidar_points"                           to="/os1_cloud_node/points_non_dense"/>
@@ -194,7 +194,9 @@
       <param name="recovery_alpha_fast"       value="0.0"/>
     </node>
 
-    <node pkg="raposa_marker" type="raposa_marker" name="raposa_marker"/>
+    <node pkg="upo_markers" type="marker_node" name="raposa_marker">
+        <remap from="/raposa/marker"    to="/raposa_marker"/>
+    </node>
 
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find radar_experiments)/rviz/fuse_sensors.rviz"/>
     <node pkg="rqt_reconfigure" name="rqt_reconfigure" type="rqt_reconfigure" if="$(arg launch_rqt_reconfigure)"/>
