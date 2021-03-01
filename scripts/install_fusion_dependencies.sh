@@ -25,3 +25,21 @@ echo -e "${YELLOW}-- Repositories cloned, compiling...${NC}"
 
 cd ..
 catkin_make
+
+echo -e "${YELLOW}-- Next step is to download bags from dropbox. You need at least 20 GB of disk space ...${NC}"
+path="radar_fusion_bags"
+
+read -p "Do you want to continue? (Y/n)" -n 1 -r
+echo  
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo -e "${YELLOW}-- Starting bags download${NC}"
+    mkdir ~/"$path"
+    cd ~/"$path" || (echo "ERROR: Couldn't go to downlaod location: ~/$path " && exit )
+    wget -O radar_fusion_bags.zip https://www.dropbox.com/sh/alo422a13irluy1/AADyN_DxhLUYeS6uhpSHvDYWa?dl=1
+    unzip radar_fusion_bags.zip
+    rm radar_fusion_bags.zip
+else
+    echo -e "${YELLOW}-- Skipping bags download${NC}"
+fi
+
+echo -e "${YELLOW}-- Dependencies installation script finished${NC}"
