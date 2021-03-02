@@ -40,7 +40,8 @@ public:
 
         //Publishers
         virtual_2d_pointcloud_pub_  = pnh_.advertise<pcl::PointCloud<pcl::PointXYZ>>("virtual_2d_pointcloud", 1);
-        ransac_result_pub_          = pnh_.advertise<pcl::PointCloud<pcl::PointXYZ>>("ransac_result", 1);
+        lidar_ransac_result_pub_    = pnh_.advertise<pcl::PointCloud<pcl::PointXYZ>>("lidar_ransac_result", 1);
+        radar_ransac_result_pub_    = pnh_.advertise<pcl::PointCloud<pcl::PointXYZI>>("radar_ransac_result", 1);
         fused_points_cloud_pub_     = pnh_.advertise<pcl::PointCloud<pcl::PointXYZ>>("fused_ranges_cloud", 1);
         radar_points_cloud_pub_     = pnh_.advertise<pcl::PointCloud<pcl::PointXYZ>>("radar_ranges_cloud", 1);
         lidar_points_cloud_pub_     = pnh_.advertise<pcl::PointCloud<pcl::PointXYZ>>("lidar_ranges_cloud", 1);
@@ -159,8 +160,14 @@ private:
         std_msgs::Float32 overlapping_dist;
         overlapping_dist.data = overlapping_scan_field_r_f_;
         overlapping_dist_pub_.publish(overlapping_dist);
+        auto cloud_ransac = applyLineRANSAC(int_cloud, _frame_id, ransac_iterations_radar_, min_ransac_pointcloud_size_radar_, ransac_distance_threshold_radar_);
+        if(ransac_iterations_radar_ > 0){
+            cloud_ransac.header.frame_id = _frame_id;
+            pcl_conversions::toPCL(ros::Time::now(), cloud_ransac.header.stamp);
+            radar_ransac_result_pub_.publish(cloud_ransac);
+        }
 
-        return applyLineRANSAC(int_cloud, _frame_id, ransac_iterations_radar_, min_ransac_pointcloud_size_radar_, ransac_distance_threshold_radar_);
+        return cloud_ransac;
     }   
     
     void processLidar(const pcl::PointCloud<pcl::PointXYZ> &points, const std::string _frame_id)
@@ -168,6 +175,11 @@ private:
         virtual_2d_scan_cloud_ = extract2DVirtualScans(points, _frame_id);
 
         lidar_ransac_result_cloud_ = applyLineRANSAC(virtual_2d_scan_cloud_, _frame_id, ransac_iterations_lidar_, min_ransac_pointcloud_size_lidar_, ransac_distance_threshold_lidar_);
+        if(ransac_iterations_lidar_>0){
+            lidar_ransac_result_cloud_.header.frame_id = _frame_id;
+            pcl_conversions::toPCL(ros::Time::now(), lidar_ransac_result_cloud_.header.stamp);
+            lidar_ransac_result_pub_.publish(lidar_ransac_result_cloud_);
+        }
     }
     void pointCloudsCallback(const sensor_msgs::PointCloud2::ConstPtr& lidar_msg,
                              const sensor_msgs::PointCloud2::ConstPtr& radar_msg)
@@ -475,8 +487,8 @@ private:
     {
 
         if(_ransac_iterations == 0){
-            pcl_conversions::toPCL(ros::Time::now(), cloud.header.stamp);
-            ransac_result_pub_.publish(cloud);
+            // pcl_conversions::toPCL(ros::Time::now(), cloud.header.stamp);
+            // // ransac_result_pub_.publish(cloud);
             return cloud;
         }
 
@@ -532,35 +544,40 @@ private:
         T point;
         int k1; //Yaw(theta)
         int k2; //Azimuth (phi)
+        int k3; //Range(m)
         double theta, phi, rho;
-        double theta_n, phi_n;
-        
+        double theta_n, phi_n, rho_n;
+
         for(auto &it: in_cloud){
             theta = atan2(it.y, it.x);
             rho = dist2Origin(it);
             phi  = acos(it.z/rho);
             k1 = std::fabs(std::round(2*rho*sin(radar_angular_resolution_yaw_) / point_step_));
             k2 = std::fabs(std::round(2*rho*sin(radar_angular_resolution_azimuth_) / point_step_));
+            k3 = std::fabs(std::round(radar_dev_ / point_step_));
             if(k1 % 2 != 0) k1 -= 1; 
             if(k2 % 2 != 0) k2 -= 1; 
             if(k1 < 2) k1 = 2;
             if(k2 < 2) k2 = 2;
             // std::cout << "K1, K2, Rho: [" << k1 << ", " << k2 << ", " << rho << "] " <<std::endl;
-            for(int i = 0; i < k1; i++ ){
-                theta_n = theta - radar_angular_resolution_yaw_/2 + i * radar_angular_resolution_yaw_/k1;
-                // std::cout << "Theta_n:" << theta_n << std::endl;
-                
-                for(int j = 0; j < k2; j++ ){
-                    // std::cout << "j / k" << j << "/ " << k2 << "  Phi_n:" << phi_n << std::endl;
-                    phi_n   = phi  - radar_angular_resolution_azimuth_/2 + j* radar_angular_resolution_azimuth_/k2;
-                    point.x = rho * sin(phi_n ) * cos(theta_n);
-                    point.y = rho * sin(phi_n ) * sin(theta_n);
-                    point.z = rho * cos(phi_n );
-                    // point.intensity = it.;
-                    int_cloud.points.push_back(point);   
-                    // std::cout << "Adding [" << point.x << ", " << point.y << "," << point.z << "] to [" << it.x << ", " << it.y << "," << it.z << "]" << std::endl;
+            for(int k = -k3; k <= k3; k++){
+                rho_n = rho + k * point_step_;
+                for(int i = 0; i < k1; i++ ){
+                    theta_n = theta - radar_angular_resolution_yaw_/2 + i * radar_angular_resolution_yaw_/k1;
+                    // std::cout << "Theta_n:" << theta_n << std::endl;
+                    for(int j = 0; j < k2; j++ ){
+                        // std::cout << "j / k" << j << "/ " << k2 << "  Phi_n:" << phi_n << std::endl;
+                        phi_n   = phi  - radar_angular_resolution_azimuth_/2 + j* radar_angular_resolution_azimuth_/k2;
+                        point.x = rho_n * sin(phi_n ) * cos(theta_n);
+                        point.y = rho_n * sin(phi_n ) * sin(theta_n);
+                        // point.z = rho_n * cos(phi_n );
+                        // point.intensity = it.;
+                        int_cloud.points.push_back(point);   
+                        // std::cout << "Adding [" << point.x << ", " << point.y << "," << point.z << "] to [" << it.x << ", " << it.y << "," << it.z << "]" << std::endl;
+                    }
                 }
             }
+
         }
         // std::cout << "Publisihing inflated pointcloud in frame: " << in_cloud.header.frame_id << std::endl; 
         pcl_conversions::toPCL(ros::Time::now(), int_cloud.header.stamp);
@@ -631,7 +648,7 @@ private:
     ros::AsyncSpinner spinner;
     ros::Subscriber odom_sub_;
     ros::Publisher  virtual_2d_pointcloud_pub_;
-    ros::Publisher  ransac_result_pub_;
+    ros::Publisher  lidar_ransac_result_pub_, radar_ransac_result_pub_;
     ros::Publisher  overlapping_dist_pub_;
     ros::Publisher  fused_points_cloud_pub_;
     ros::Publisher  radar_points_cloud_pub_;
