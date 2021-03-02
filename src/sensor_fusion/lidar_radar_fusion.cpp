@@ -153,7 +153,7 @@ private:
             inflateRadarScanByResolution(int_cloud);
         
         for (auto &it : int_cloud)
-            radar_ranges.push_back(dist2Origin(it));
+            radar_ranges.push_back(std::move(dist2Origin(it)));
 
         double average_range_radar_scan_ = std::accumulate(radar_ranges.begin(), radar_ranges.end(), 0.0) / radar_ranges.size();
         std::cout << "Processed Radar" << std::endl;
@@ -338,7 +338,7 @@ private:
                 }                
             }
         }
-        
+
         //In case lidar cloud is empty, fill the result cloud with the radar points (VERY HIGH DENSITY SMOKE CASE)
         if(lidar_ranges_polar_coord_map.empty()){
             for(auto &it: radar_cloud){
@@ -365,15 +365,15 @@ private:
         p.z = 0;
         //Undo fused ranges cloud
         for(const auto &it: fused_ranges)
-            fused_points_cloud.push_back(fromPolarToXY(it));
+            fused_points_cloud.push_back(std::move(fromPolarToXY(it)));
         
         //Undo radar ranges cloud
         for(const auto &it: radar_ranges)
-            radar_points_cloud.push_back(fromPolarToXY(it));
+            radar_points_cloud.push_back(std::move(fromPolarToXY(it)));
         
         //Undo lidar ranges cloud
         for(const auto &it: lidar_ranges)
-            lidar_points_cloud.push_back(fromPolarToXY(it));
+            lidar_points_cloud.push_back(std::move(fromPolarToXY(it)));
         
 
         pcl_conversions::toPCL(ros::Time::now(), lidar_points_cloud.header.stamp);
@@ -586,7 +586,7 @@ private:
                     theta_n = theta - radar_angular_resolution_yaw_/2 + i * radar_angular_resolution_yaw_/k1;
                     for(int j = 0; j < k2; j++ ){
                         phi_n   = phi  - radar_angular_resolution_azimuth_/2 + j* radar_angular_resolution_azimuth_/k2;
-                        int_cloud.points.push_back(sphericalToXY<T>(rho_n,theta_n,phi_n));   
+                        int_cloud.points.push_back(std::move(sphericalToXY<T>(rho_n,theta_n,phi_n)));   
                     }
                 }
             }
