@@ -21,6 +21,8 @@
 #include <nav_msgs/Odometry.h>
 
 #include <fstream>
+
+// #define STEP_BY_STEP
 class LidarRadarFuser
 {
 
@@ -115,8 +117,8 @@ public:
                   << "\tAcc. Radar Fuse only Acc Radar:    " << fuse_only_enhaced_radar_ << std::endl
                   << "\tAcc. Radar Max Yaw Diff:           " << max_radar_acc_yaw_incr_ << std::endl
                   << "\tInflate Radar Using Ang. Res:      " << inflate_radar_points_from_angular_resolution_ << std::endl
-                  << "\tAngular Resolution Yaw (deg):      " << radar_angular_resolution_yaw_ << std::endl
-                  << "\tAngular Resolution Azimuth (deg):  " << radar_angular_resolution_azimuth_ << std::endl
+                  << "\tAngular Resolution Yaw (deg):      " << yaw_res_deg << std::endl
+                  << "\tAngular Resolution Azimuth (deg):  " << azim_res_deg << std::endl
                   << "\tAngular inflation points step(m):  " << point_step_ << std::endl
                   << "\tBase Frame ID:                     " << robot_base_frame_id_ << std::endl
                   << "\tOdom Frame ID:                     " << odom_frame_id_ << std::endl
@@ -171,10 +173,11 @@ private:
                              const sensor_msgs::PointCloud2::ConstPtr& radar_msg)
     {   
         ros::Duration time_diff = lidar_msg->header.stamp - radar_msg->header.stamp;
+        radar_original_frame_ = radar_msg->header.frame_id;
         // std::cout<< "Time difference: " << time_diff.toSec() << std::endl;
         //!Store radar clouds in ODOM Frame in acc_radar_clouds_
         sensor_msgs::PointCloud2  radar_msg_odom_frame, radar_msg_lidar_frame;
-        pcl::PointCloud<pcl::PointXYZI> radar_cloud_odom;
+        pcl::PointCloud<pcl::PointXYZI> radar_cloud_odom, radar_cloud_lidar_frame;
         pcl_ros::transformPointCloud(odom_frame_id_, *radar_msg, radar_msg_odom_frame,tf_listener_);
         pcl::fromROSMsg(radar_msg_odom_frame, radar_cloud_odom);
         for(auto &it: radar_cloud_odom)
@@ -189,11 +192,11 @@ private:
         pcl::fromROSMsg(*lidar_msg, last_lidar_cloud_);
 
         pcl_ros::transformPointCloud(lidar_msg->header.frame_id, *radar_msg, radar_msg_lidar_frame,tf_listener_);
-        pcl::fromROSMsg(radar_msg_lidar_frame, last_radar_cloud_);
+        pcl::fromROSMsg(radar_msg_lidar_frame, last_radar_cloud_lidar_frame_);
 
         if(save_radar_data_){
             std::pair<double,double> temp_p;
-            for(auto &it: last_radar_cloud_){
+            for(auto &it: last_radar_cloud_lidar_frame_){
                 temp_p = xyToPolar(it);
                 radar_data_file_ << temp_p.first << ", " << temp_p.second << ", "  << it.intensity << std::endl;
             }
@@ -216,13 +219,13 @@ private:
             std::cout<< "Publishing fused cloud with radar enahcement!" << radar_acc_ransac_result_cloud.points.size() << " /" << fused_scan_result_.points.size() << std::endl;
             insert_acc_radar_clouds_ = false;
         }else{
-            radar_ransac_result_cloud_ = processRadar(last_radar_cloud_, radar_msg->header.frame_id);
+            radar_ransac_result_cloud_ = processRadar(last_radar_cloud_lidar_frame_, lidar_msg->header.frame_id);
             fused_scan_result_ = createFusedCloud(lidar_msg->header.frame_id, lidar_ransac_result_cloud_, radar_ransac_result_cloud_);
         }
 
          std::cout << "Cloud sizes:" << std::endl <<
                      "  Lidar: " << lidar_ransac_result_cloud_.points.size() << std::endl <<
-                     "  Radar: " << last_radar_cloud_.points.size() << std::endl <<
+                     "  Radar: " << last_radar_cloud_lidar_frame_.points.size() << std::endl <<
                      "  Radar After Ransac: " << radar_ransac_result_cloud_.points.size() << std::endl;
     }
     template<typename T=pcl::PointXYZ, typename U=pcl::PointXYZI>
@@ -524,6 +527,8 @@ private:
     void inflateRadarScanByResolution(pcl::PointCloud<T> &in_cloud){
         //TODO How to check if there is intensity field and forward it?
         std::cout<< "Inflating Cloud of size: "<< in_cloud.points.size() << std::endl;
+        typename pcl::PointCloud<T> int_cloud;
+        int_cloud.header = in_cloud.header;
         T point;
         int k1; //Yaw(theta)
         int k2; //Azimuth (phi)
@@ -540,26 +545,27 @@ private:
             if(k2 % 2 != 0) k2 -= 1; 
             if(k1 < 2) k1 = 2;
             if(k2 < 2) k2 = 2;
-            std::cout << "K1, K2, Rho: [" << k1 << ", " << k2 << ", " << rho << "] " <<std::endl;
+            // std::cout << "K1, K2, Rho: [" << k1 << ", " << k2 << ", " << rho << "] " <<std::endl;
             for(int i = 0; i < k1; i++ ){
                 theta_n = theta - radar_angular_resolution_yaw_/2 + i * radar_angular_resolution_yaw_/k1;
-                std::cout << "Theta_n:" << theta_n << std::endl;
+                // std::cout << "Theta_n:" << theta_n << std::endl;
                 
                 for(int j = 0; j < k2; j++ ){
-                    std::cout << "j / k" << j << "/ " << k2 << "  Phi_n:" << phi_n << std::endl;
+                    // std::cout << "j / k" << j << "/ " << k2 << "  Phi_n:" << phi_n << std::endl;
                     phi_n   = phi  - radar_angular_resolution_azimuth_/2 + j* radar_angular_resolution_azimuth_/k2;
                     point.x = rho * sin(phi_n ) * cos(theta_n);
                     point.y = rho * sin(phi_n ) * sin(theta_n);
                     point.z = rho * cos(phi_n );
-                    in_cloud.points.push_back(point);   
+                    // point.intensity = it.;
+                    int_cloud.points.push_back(point);   
                     // std::cout << "Adding [" << point.x << ", " << point.y << "," << point.z << "] to [" << it.x << ", " << it.y << "," << it.z << "]" << std::endl;
-                    
                 }
             }
         }
-        pcl_conversions::toPCL(ros::Time::now(), in_cloud.header.stamp);
-        inflated_radar_cloud_pub_.publish(in_cloud);
-
+        // std::cout << "Publisihing inflated pointcloud in frame: " << in_cloud.header.frame_id << std::endl; 
+        pcl_conversions::toPCL(ros::Time::now(), int_cloud.header.stamp);
+        inflated_radar_cloud_pub_.publish(int_cloud);
+        in_cloud = int_cloud;
     }
     void dynamicReconfigureCallback(radar_experiments::LidarFusionConfig &config, uint32_t level){
         if(first){
@@ -639,7 +645,7 @@ private:
     std::unique_ptr<dynamic_reconfigure::Server<radar_experiments::LidarFusionConfig>::CallbackType> dynamic_recong_cb_f_;
     bool first{true}; //Used to detect the init of the server, when it is initialized it calls the callback at the startup and overrides the launch params(whe dont want this)
 
-    pcl::PointCloud<pcl::PointXYZI> last_radar_cloud_, radar_ransac_result_cloud_;
+    pcl::PointCloud<pcl::PointXYZI> last_radar_cloud_lidar_frame_, radar_ransac_result_cloud_;
     pcl::PointCloud<pcl::PointXYZ> last_lidar_cloud_;
     pcl::PointCloud<pcl::PointXYZ> virtual_2d_scan_cloud_;
     pcl::PointCloud<pcl::PointXYZ> lidar_ransac_result_cloud_;
@@ -692,6 +698,7 @@ private:
     double radar_angular_resolution_yaw_;
     double radar_angular_resolution_azimuth_;
     double point_step_;
+    std::string radar_original_frame_;
 };
 int main(int argc, char **argv)
 {
