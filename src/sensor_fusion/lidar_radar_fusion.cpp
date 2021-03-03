@@ -234,7 +234,7 @@ private:
         //In case two range measurements verify this inequality, calculate R fusion and put it into the result fused cloud
         if(enable_radar_enhancement_ && insert_acc_radar_clouds_ ){
             pcl::PointCloud<pcl::PointXYZI> radar_acc_ransac_result_cloud;
-            auto interm_cloud = processRadar(acc_radar_clouds_, acc_radar_clouds_.header.frame_id);
+            auto interm_cloud = processRadar(acc_radar_clouds_base_frame_, acc_radar_clouds_base_frame_.header.frame_id);
             std::cout << "Interm cloud timestamp: " << interm_cloud.header.stamp << std::endl;
             interm_cloud.header.stamp -=  100000; //! This magic is done to avoid extrapolation into the future TF ERROR (dont know why it happens)
             
