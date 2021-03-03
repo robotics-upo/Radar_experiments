@@ -296,7 +296,6 @@ private:
                 if(std::find(fused_lidar_points_list.begin(), fused_lidar_points_list.end(), lidar_range.first) != fused_lidar_points_list.end()) continue; //Skip lidar point if already considered
                 //!Lidar insertion conditions
                 if( std::fabs( lidar_range.second.first - radar_point_range ) > d_f_ ){
-                    // if(std::find(lidar_ranges.begin(), lidar_ranges.end(), lidar_range) == lidar_ranges.end() )  
                     lidar_ranges.emplace_back(lidar_range.second);
                     fused_lidar_points_list.push_back(lidar_range.first);
                     continue;
@@ -305,13 +304,11 @@ private:
                 fused_range = fuseRanges(radar_point_range, radarDev(), lidar_range.second.first, lidarDev(lidar_range.second.first));
 
                 if( lidar_range.second.first > overlapping_scan_field_r_f_ && lidar_range.second.first < lidar_max_range_ ){ //120 == infinity
-                    // if(std::find(lidar_ranges.begin(), lidar_ranges.end(), lidar_range) == lidar_ranges.end() )  
                     lidar_ranges.emplace_back(lidar_range.second);
                     fused_lidar_points_list.push_back(lidar_range.first);
                     continue;
                 }
                 if( lidar_range.second.first - radar_point_range > d_f_ && lidar_range.second.first < fused_range){
-                    // if(std::find(lidar_ranges.begin(), lidar_ranges.end(), lidar_range) == lidar_ranges.end() )  
                     lidar_ranges.emplace_back(lidar_range.second);
                     fused_lidar_points_list.push_back(lidar_range.first);
                     continue;
@@ -319,20 +316,17 @@ private:
                 //! Radar Insertion conditions
                     //? Type I
                 if( lidar_range.second.first - radar_point_range < -1*d_f_ && radar_point_range < overlapping_scan_field_r_f_ ){ //Caso radar un poco mas alejado que lidar
-                    std::pair<double, double> p(radar_point_range, pointYaw(it));
-                    radar_ranges.emplace_back(p);
+                    radar_ranges.emplace_back(std::move(std::pair<double, double>(radar_point_range, pointYaw(it))));
                     continue;
                 }
                     //? Type II
                 if( lidar_range.second.first >= lidar_max_range_ && radar_point_range < lidar_max_range_ ){ //120 == infinity Caso lidar dando infinito(no se da?) 
-                    std::pair<double, double> p(radar_point_range, pointYaw(it));                    //y punto de radar dando algo
-                    radar_ranges.emplace_back(p);
+                    radar_ranges.emplace_back(std::move(std::pair<double, double>(radar_point_range, pointYaw(it))));
                     continue;
                 }
                 //! Fused ranges insertion condition
                 if( std::fabs(lidar_range.second.first - radar_point_range) < d_f_ ){
-                    std::pair<double, double> p(fused_range, lidar_range.second.second);
-                    fused_ranges.emplace_back(p);
+                    fused_ranges.emplace_back(std::move(std::pair<double,double>(fused_range, lidar_range.second.second)));
                     fused_lidar_points_list.push_back(lidar_range.first);
                     continue;
                 }                
@@ -342,8 +336,7 @@ private:
         //In case lidar cloud is empty, fill the result cloud with the radar points (VERY HIGH DENSITY SMOKE CASE)
         if(lidar_ranges_polar_coord_map.empty()){
             for(auto &it: radar_cloud){
-                radar_point_range = dist2Origin(it);
-                std::pair<double, double> p(radar_point_range, pointYaw(it));
+                std::pair<double, double> p(dist2Origin(it), pointYaw(it));
                 radar_ranges.emplace_back(p);
             }
         }
