@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import rospy
-import File
 from tf2_geometry_msgs import PoseStamped
 from tf_conversions import transformations
 from numpy import pi, sin, cos

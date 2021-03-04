@@ -1,8 +1,13 @@
 <launch>
     <param name="use_sim_time" value="true"/>
 
+    <!-- Constants -->
+    <arg name="pi"   value="3.141592654"/>
+
+
     <!-- Bag file args -->
-    <arg name="bag_file" default="$(env HOME)/2020-11-11-13-03-27_mapping_corcho1.bag"/>
+    <arg name="bag_file" default="$(env HOME)/2020-11-11-13-14-47_mapping_corcho2.bag"/>
+    <!-- <arg name="bag_file" default="$(env HOME)/2020-11-11-13-03-27_mapping_corcho1.bag"/> -->
     <arg name="rate" default="0.5"/>
     <arg name="use_bag_tf" default="false"/>
     <arg name="add_variance" default="0.0"/>
@@ -10,16 +15,20 @@
     <!-- ARUCO Detect Args -->
     <arg name="camera_1" default="usb_cam_front" />
     <arg name="dictionary" default="16"/>
-    <arg name="fiducial_len" default="0.185"/>
+    <arg name="fiducial_len" default="0.18"/>
     <arg name="fiducial_len_override" default="1-6:0.04"/>
     <arg name="ignore_fiducials" default="500-1024,0-399"/>
     <arg name="detect_aruco_back" default="true"/>
-    <arg name="transport" default="compressed"/>
     <arg name="image" default="image_flipped"/>
     <arg name="do_pose_estimation" default="true"/>
     
     <!-- Odom Type-->
     <arg name="aloam_odom" default="true"/>
+
+    <!-- This node susbcribes to /idmind_motors/wheel_odom and publishes /odom topic and tf from odom to base link without reading imu -->
+    <node pkg="idmind_navigation" type="odometry_node.py" name="odometry_node_idmind" unless="$(arg aloam_odom)">
+        <param name="/bot/base_width" value="0.7"/>
+    </node>
     
 
     <!-- SLAM Parameters -->
@@ -36,21 +45,22 @@
     <include file="$(dirname)/frames.launch"/>
 
     <!-- Uncompress Camera Images -->
-    <node pkg="image_transport" type="republish" name="front_repub" args="compressed in:=/$(arg camera_1)/$(arg image) raw out:=/$(arg camera_1)/$(arg image)"/>
+    <!-- <node pkg="image_transport" type="republish" name="front_repub" args="compressed in:=/$(arg camera_1)/$(arg image) raw out:=/$(arg camera_1)/$(arg image)"/> -->
 
     <!-- BAG Player -->
     <!-- Without the own tf of the bag -->
-    <node pkg="rosbag" type="play" name="play" args="$(arg bag_file) --clock --rate $(arg rate)" >
+    <arg name="start" default="15.0"/>
+    <node pkg="rosbag" type="play" name="play" args="$(arg bag_file) -s $(arg start) --clock -r $(arg rate)" >
         <remap from="/tf" to="/not_used_tf" unless="$(arg use_bag_tf)"/>
         <remap from="/tf_static" to="/tf_static_not_used" unless="$(arg use_bag_tf)"/>
     </node>
 
-    <include file="$(find cloud_concatenator)/launch/concatenator.launch"/>
+    <!-- <include file="$(find cloud_concatenator)/launch/concatenator.launch"/> -->
 
     <!-- Aruco detect for front camera -->
 
     <node pkg="aruco_detect" name="aruco_detect_$(arg camera_1)" type="aruco_detect" respawn="false">
-        <param name="image_transport" value="$(arg transport)"/>
+        <param name="image_transport" value="compressed"/>
         <param name="publish_images" value="true" />
         <param name="fiducial_len" value="$(arg fiducial_len)"/>
         <param name="dictionary" value="$(arg dictionary)"/>
@@ -64,14 +74,12 @@
     </node>
 
     <!-- Odom to tf, to use with MCL -->
-    <node pkg="odom_to_tf" type="odom_to_tf.py" name="odom_to_tf" unless="$(arg aloam_odom)">
+    <!-- <node pkg="odom_to_tf" type="odom_to_tf.py" name="odom_to_tf" unless="$(arg aloam_odom)">
         <param name="laser_frame" value="base_link"/>
         <param name="rotate_90" value="false"/>
-    </node>
-
-    <include file="$(find nix_launchers)/launch/aloam.launch" if="$(arg aloam_odom)">
-        <arg name="only_odometry" value="true"/>
-    </include>
+    </node> -->
+    <!-- ALOAM Odom if necessary -->
+    <include file="$(dirname)/aloam_odom.launch" if="$(arg aloam_odom)"/>
 
     <node name="ground_truth" pkg="fiducial_slam" type="g2o_fiducial_slam" output="screen"> <!-- launch-prefix="gdbserver localhost:1337" > -->
         <param name="odom_frame" value="$(arg odom_frame)"/>
@@ -81,7 +89,77 @@
         <param name="weighting_scale" value="0.5"/>
         <param name="update_secs" value="$(arg update_secs)"/>
         <param name="stats_file" value="$(arg dump_file)"/>
+        <param name="emit_tf" value="false"/>
     </node>
 
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(find radar_experiments)/rviz/aruco.rviz"/>
+
+    <!-- Use MCL2D -->
+
+    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
+        <remap from="cloud_in"            to="/os1_cloud_node/points_non_dense"/>
+        <remap from="scan"                to="/os1_cloud_node/points_non_dense_laser_scan"/>
+        <param name="min_height"          value="-0.2"/>
+        <param name="max_height"          value="0.2"/>
+        <param name="angle_min"           value="$(eval -1*arg('pi'))"/>
+        <param name="angle_max"           value="$(eval arg('pi'))"/>
+        <!-- <param name="angle_increment"     value="$(arg"/> -->
+        <param name="queue_size"          value="1"/>
+        <param name="scan_time"           value="0.1"/>
+        <param name="range_min"           value="0.5"/>
+        <param name="range_max"           value="120"/>
+        <param name="target_frame"        value="os1_lidar"/>
+        <param name="transform_tolerance" value="0.5"/>
+    </node>
+
+    <!-- MCL 2D Stuff -->
+    <arg name="map2d_name"     default="tunel2d_map4"/>
+    <!-- <arg name="avoid_imu_odom" default="true"/> -->
+    <arg name="initial_pose_x"  default="6.3"/>
+    <arg name="initial_pose_y"  default="4.25"/>
+    <arg name="initial_pose_a"  default="1.56"/>
+
+    <node pkg="map_server" name="map_server" type="map_server" args="$(find radar_experiments)/maps/$(arg map2d_name).yaml"/>
+
+    <node pkg="amcl" type="amcl" name="amcl" output="screen">
+      <!-- Publish scans from best pose at a max of 10 Hz -->
+      <remap from="scan"                      to="/os1_cloud_node/points_non_dense_laser_scan"/>
+      <param name="initial_pose_x"            value="$(arg initial_pose_x)"/>
+      <param name="initial_pose_y"            value="$(arg initial_pose_y)"/>
+      <param name="initial_pose_a"            value="$(arg initial_pose_a)"/>
+      <param name="initial_cov_xx"            value="0.02"/>
+      <param name="initial_cov_yy"            value="0.02"/>
+      <param name="initial_cov_aa"            value="0.04"/>
+      <param name="odom_model_type"           value="diff"/>
+      <param name="transform_tolerance"       value="0.2" />
+      <param name="gui_publish_rate"          value="10.0"/>
+      <param name="laser_max_beams"           value="60"/>
+      <param name="min_particles"             value="500"/>
+      <param name="max_particles"             value="5000"/>
+      <param name="kld_err"                   value="0.05"/>
+      <param name="kld_z"                     value="0.99"/>
+      <param name="odom_alpha1"               value="0.6"/>
+      <param name="odom_alpha2"               value="0.6"/>
+      <!-- translation std dev, m -->
+      <param name="odom_alpha3"               value="0.5"/>
+      <param name="odom_alpha4"               value="0.5"/>
+      <param name="odom_alpha5"               value="0.1"/>
+      <param name="laser_z_hit"               value="0.5"/>
+      <param name="laser_z_short"             value="0.05"/>
+      <param name="laser_z_max"               value="0.05"/>
+      <param name="laser_z_rand"              value="0.8"/>
+      <param name="laser_sigma_hit"           value="0.2"/>
+      <param name="laser_lambda_short"        value="0.1"/>
+      <param name="laser_lambda_short"        value="0.1"/>
+      <param name="laser_model_type"          value="likelihood_field"/>
+      <!-- <param name="laser_model_type" value="beam"/> -->
+      <param name="laser_likelihood_max_dist" value="2.0"/>
+      <param name="update_min_d"              value="0.1"/>
+      <param name="update_min_a"              value="0.2"/>
+      <param name="odom_frame_id"             value="odom"/>
+      <param name="resample_interval"         value="1"/>
+      <param name="transform_tolerance"       value="0.1"/>
+      <param name="recovery_alpha_slow"       value="0.0"/>
+      <param name="recovery_alpha_fast"       value="0.0"/>
+    </node>
 </launch>

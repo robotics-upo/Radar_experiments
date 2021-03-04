@@ -92,6 +92,7 @@
 
     <include file="$(find nix_launchers)/launch/aloam.launch" if="$(arg aloam_odom)">
         <arg name="only_odometry" value="true"/>
+        <param name="rotate_90" value="true"/>
     </include>
 
     <!-- MCL 3D -->

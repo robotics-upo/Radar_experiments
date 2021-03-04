@@ -8,8 +8,8 @@
     <arg name="play_bag"               default="true"/>
     <arg name="sec"                    default="30"/>
     <arg name="rate"                   default="1"/>
-
-    <arg name="bag_name"               default="2020-12-01-12-04-38_nocams_front_cam_noodomtf.bag"/>
+    <arg name="bag_name"               default="2020-11-11-13-03-27_mapping_corcho1.bag"/>
+    <!-- <arg name="bag_name"               default="2020-12-01-12-04-38_nocams_front_cam_noodomtf.bag"/> -->
     <!-- <arg name="bag_name"               default="2020-12-01-11-36-21_front_cam_nodomtf2.bag"/> -->
     <!-- <arg name="bag_name"               default="2020-12-01-10-45-22_front_cam_odomtf.bag   "/> -->
     <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name)"/>
@@ -47,7 +47,7 @@
 
     <arg name="n_clouds" default="4"/>
 
-    <node name="cloud_concatenator" pkg="cloud_concatenator" type="cloud_concatenator_node" output="screen" unless="$(arg use_async_concatenator)">
+    <node name="cloud_concatenator" pkg="cloud_concatenator" type="cloud_concatenator_node" unless="$(arg use_async_concatenator)">
         <param name="n_clouds" value="$(arg n_clouds)"/>
         <remap from="pc_1" to="$(arg cloud_1)"/>
         <remap from="pc_2" to="$(arg cloud_2)"/>
@@ -210,5 +210,41 @@
     <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="tf_radar_rear"          args="-0.33 0.05 -0.2 $(arg pi) 0 0  os1_sensor ti_mmwave_rear_radar  2"/>
     <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="tf_radar_right"         args="0 -0.05 -0.05 -$(arg pi/2) 0 0 os1_sensor ti_mmwave_right_radar 2"/>
     <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="tf_radar_left"          args="0 0.05 -0.05 $(arg pi/2) 0 0   os1_sensor ti_mmwave_left_radar  2"/>
+
+<!-- Fiducial SLAM and ground truth stuff!! -->
+    <arg name="map_fiducials"           default="true"/>
+    <arg name="camera_1"           default="usb_cam_front"/>
+    <arg name="image"           default="image_flipped"/>
+    <arg name="fiducial_len"    default="0.18"/>
+    <arg name="ignore_fiducials" default=""/>
+    <arg name="dictionary" default="16"/>
+    <arg name="fiducial_len_override" default=""/>
+    <arg name="do_pose_estimation" default="true"/>
+
+    <node if="$(arg map_fiducials)" pkg="fiducial_slam" name="fid_slam" type="g2o_fiducial_slam">
+        <param name="publish_tf" value="false"/>
+    </node>
+    <!-- <arg name="aloam_odom" default="true"/> -->
+
+    <node pkg="aruco_detect" name="aruco_detect_$(arg camera_1)" type="aruco_detect" respawn="false">
+        <param name="image_transport" value="compressed"/>
+        <param name="publish_images" value="true" />
+        <param name="fiducial_len" value="$(arg fiducial_len)"/>
+        <param name="dictionary" value="$(arg dictionary)"/>
+        <param name="do_pose_estimation" value="$(arg do_pose_estimation)"/>
+        <param name="ignore_fiducials" value="$(arg ignore_fiducials)"/>
+        <param name="fiducial_len_override" value="$(arg fiducial_len_override)"/>
+        <remap from="/camera" to="$(arg camera_1)/$(arg image)"/>
+        <remap from="/camera/compressed" to="$(arg camera_1)/$(arg image)/compressed"/>
+        <remap from="/camera_info" to="$(arg camera_1)/camera_info"/>
+        <remap from="/fiducial_images" to="$(arg camera_1)/fiducial_images"/>
+    </node>
+
+    <node name="gt_saver" pkg="radar_experiments" type="calculate_ground_truth.py" output="screen" unless="$(arg map_fiducials)"/>
+
+    <include file="$(find fiducial_slam)/launch/fiducial_slam.launch" unless="$(arg map_fiducials)">
+        <arg name="map_file" value="$(find radar_experiments)/maps/map_gt.txt"/>
+        <arg name="read_only_map" value="true"/>
+    </include>
 
 </launch>

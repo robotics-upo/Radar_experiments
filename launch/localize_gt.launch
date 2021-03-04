@@ -8,6 +8,9 @@
     <arg name="stats_file" default="$(find radar_experiments)/stats/stats_gt.txt"/>
     <arg name="map_name" default="map_aruco_sotano_v1.txt"/>
     <arg name="map_file" default="$(find radar_experiments)/maps/$(arg map_name)"/>
+    <arg name="camera_1" default="usb_cam_front" />
+    <arg name="fiducial_len" default="0.18"/>
+    <arg name="ignore_fiducials" default="0-399, 500-1023"/>
 
     <include file="$(find radar_experiments)/launch/make_aruco_map.launch">
         <arg name="bag_file" value="$(arg bag_file)"/>
