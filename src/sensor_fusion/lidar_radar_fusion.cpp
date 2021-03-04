@@ -25,7 +25,7 @@
 // #define STEP_BY_STEP
 class LidarRadarFuser
 {
-
+    using DoublePair = std::pair<double, double>;
 public:
     LidarRadarFuser(): spinner(2), pointclouds_subs_sync_(NULL)
     {
@@ -258,98 +258,93 @@ private:
                      "  Radar: " << last_radar_cloud_lidar_frame_.points.size() << std::endl <<
                      "  Radar After Ransac: " << radar_ransac_result_cloud_.points.size() << std::endl;
     }
+    //Return pairs of range, theta points that verifies that the yaw 
+    template <typename T>
+    DoublePair searchPointWithYaw(const pcl::PointCloud<T> &_points, const double &_yaw, const double &_tolerance){
+        
+        std::vector<double> r_res, r_yaw;
+        DoublePair p;
+        for(const auto &it: _points){
+            p = xyToPolar(it);
+            if( p.second < _yaw + _tolerance &&
+                p.second > _yaw - _tolerance ){
+                    r_res.push_back(p.first);
+                    r_yaw.push_back(p.second);
+                }
+        }
+        p.first = p.second = 0;
+        if(! r_res.empty() ){
+            p.first  = std::accumulate(r_res.begin(), r_res.end(), 0.0) / r_res.size();
+            p.second = std::accumulate(r_yaw.begin(), r_yaw.end(), 0.0) / r_yaw.size();
+        }
+
+        return p;
+    }
     template<typename T=pcl::PointXYZ, typename U=pcl::PointXYZI>
     pcl::PointCloud<pcl::PointXYZ> createFusedCloud(const std::string &frame_id, const pcl::PointCloud<T> &lidar_cloud, const pcl::PointCloud<U> &radar_cloud){
 
-
-        //It's more efficient to iterate over radar cloud as it has less points that the lidar cloud (? sure ?)
-        std::map<int, std::pair<double, double>> lidar_ranges_polar_coord_map;
-        std::cout<< "Ransac result cloud size: " << lidar_ransac_result_cloud_.points.size() <<std::endl; 
-        int i = 0;
-        std::pair<int, std::pair<double,double>> temp_pair(0,std::pair<double,double>(0,0));
-        // std::pair<int, std::pair<double,double>> temp_pair(0,std::pair<double,double>(lidar_max_range_ + 1,0));
-        //for(int j = 0; j < std::floor(360/yaw_tolerance_); ++j){
-        //    temp_pair.first = j;
-        //    lidar_ranges_polar_coord_map.insert(temp_pair);
-        //}
-        temp_pair.first = 0;
-        for(auto &it: lidar_cloud){//TODO RE THINK ON HOW TO BUILD THIS LIDAR RANGES POLAR COORD MAP (IS LIKE A SENSOR MSG LASER SCAN)
-            ++temp_pair.first;      //I think it's better to build a full scan initialized with all the points at inf. 
-            temp_pair.second = xyToPolar(it); //And after all replace the inf points but the existing values, but the result scan 
-            lidar_ranges_polar_coord_map[temp_pair.first] =  temp_pair.second;
-            // lidar_ranges_polar_coord_map.insert(temp_pair);
-        }
-
-        if( lidar_ranges_polar_coord_map.empty() ) ROS_WARN("Lidar Cloud empty!!!");
-
-        std::vector<std::pair<double, double>> fused_ranges, lidar_ranges, radar_ranges;
-        std::vector<int> fused_lidar_points_list; //Here we store the key numbers of the lidar_ranges_polar_coord_map that have been already inserted anywhere
-                                                  //To avoid duplicated points
-        double radar_point_range, fused_range;        
-        
-        //TODO There are repeated points pushed inside the final container. FIX
-        for(auto &it: radar_cloud){
-            radar_point_range = dist2Origin(it);
-            if(lidar_ranges_polar_coord_map.empty()) break; //If no lidar cloud, exit and fill the result cloud with the radar poinnts
-            
-            for(auto &lidar_range: lidar_ranges_polar_coord_map){
-                if(std::find(fused_lidar_points_list.begin(), fused_lidar_points_list.end(), lidar_range.first) != fused_lidar_points_list.end()) continue; //Skip lidar point if already considered
-                //!Lidar insertion conditions
-                if( std::fabs( lidar_range.second.first - radar_point_range ) > d_f_ ){
-                    lidar_ranges.emplace_back(lidar_range.second);
-                    fused_lidar_points_list.push_back(lidar_range.first);
-                    continue;
-                }
-
-                fused_range = fuseRanges(radar_point_range, radarDev(), lidar_range.second.first, lidarDev(lidar_range.second.first));
-
-                if( lidar_range.second.first > overlapping_scan_field_r_f_ && lidar_range.second.first < lidar_max_range_ ){ //120 == infinity
-                    lidar_ranges.emplace_back(lidar_range.second);
-                    fused_lidar_points_list.push_back(lidar_range.first);
-                    continue;
-                }
-                if( lidar_range.second.first - radar_point_range > d_f_ && lidar_range.second.first < fused_range){
-                    lidar_ranges.emplace_back(lidar_range.second);
-                    fused_lidar_points_list.push_back(lidar_range.first);
-                    continue;
-                }
-                //! Radar Insertion conditions
-                    //? Type I
-                if( lidar_range.second.first - radar_point_range < -1*d_f_ && radar_point_range < overlapping_scan_field_r_f_ ){ //Caso radar un poco mas alejado que lidar
-                    radar_ranges.emplace_back(std::move(std::pair<double, double>(radar_point_range, pointYaw(it))));
-                    continue;
-                }
-                    //? Type II
-                if( lidar_range.second.first >= lidar_max_range_ && radar_point_range < lidar_max_range_ ){ //120 == infinity Caso lidar dando infinito(no se da?) 
-                    radar_ranges.emplace_back(std::move(std::pair<double, double>(radar_point_range, pointYaw(it))));
-                    continue;
-                }
-                //! Fused ranges insertion condition
-                if( std::fabs(lidar_range.second.first - radar_point_range) < d_f_ ){
-                    fused_ranges.emplace_back(std::move(std::pair<double,double>(fused_range, lidar_range.second.second)));
-                    fused_lidar_points_list.push_back(lidar_range.first);
-                    continue;
-                }                
-            }
-        }
-
-        //In case lidar cloud is empty, fill the result cloud with the radar points (VERY HIGH DENSITY SMOKE CASE)
-        if(lidar_ranges_polar_coord_map.empty()){
-            for(auto &it: radar_cloud){
-                std::pair<double, double> p(dist2Origin(it), pointYaw(it));
-                radar_ranges.emplace_back(p);
-            }
-        }
-        if(radar_cloud.empty()){
-            for(const auto &it: lidar_ranges_polar_coord_map)
-                lidar_ranges.push_back(it.second);
-        }
-        //Undo ranges calculation-> get x,y points coordinates from polar ones
-
-        //Create cloud from fused ranges
         pcl::PointCloud<pcl::PointXYZ> result_cloud, fused_points_cloud, radar_points_cloud, lidar_points_cloud;
         pcl::PointXYZ p;
         
+        std::vector<DoublePair> lidar_ranges, radar_ranges, fused_ranges;
+        DoublePair lidar_av, radar_av;
+
+        double yaw = - M_PI + yaw_tolerance_/2;
+
+        for(int i = 0; i < std::ceil(2*M_PI/yaw_tolerance_); i++){
+            
+            lidar_av = searchPointWithYaw(lidar_cloud, yaw, yaw_tolerance_);
+            radar_av = searchPointWithYaw(radar_cloud, yaw, yaw_tolerance_);
+            yaw += yaw_tolerance_;
+    
+            if( lidar_av.first == 0 && radar_av.first == 0 )
+                continue;
+            
+            if( lidar_av.first != 0 && radar_av.first == 0){
+                lidar_ranges.push_back(lidar_av);
+                continue;
+            }
+            if( lidar_av.first == 0 && radar_av.first != 0){
+                radar_ranges.push_back(radar_av);
+                continue;
+            }
+       
+            if( std::fabs( lidar_av.first - radar_av.first ) > d_f_ ){
+                lidar_ranges.emplace_back(lidar_av);
+                continue;
+            }
+
+            double fused_range = fuseRanges(radar_av.first, radarDev(), lidar_av.first, lidarDev(lidar_av.first));
+            if( lidar_av.first > overlapping_scan_field_r_f_ && lidar_av.first < lidar_max_range_ ){ //120 == infinity
+                lidar_ranges.emplace_back(lidar_av);
+                continue;
+            }
+            if( lidar_av.first - radar_av.first > d_f_ && lidar_av.first < fused_range){
+                lidar_ranges.emplace_back(lidar_av);
+                continue;
+            }
+            //! Radar Insertion conditions
+                //? Type I
+            if( lidar_av.first - radar_av.first < -1*d_f_ && radar_av.first < overlapping_scan_field_r_f_ ){ //Caso radar un poco mas alejado que lidar
+                radar_ranges.emplace_back(std::move(DoublePair(radar_av.first, radar_av.second)));
+                continue;
+            }
+                //? Type II
+            if( lidar_av.first >= lidar_max_range_ && radar_av.first < lidar_max_range_ ){ //120 == infinity Caso lidar dando infinito(no se da?) 
+                radar_ranges.emplace_back(std::move(DoublePair(radar_av.first, radar_av.second)));
+                continue;
+            }
+            //! Fused ranges insertion condition
+            if( std::fabs(lidar_av.first - radar_av.first) < d_f_ ){
+                fused_ranges.emplace_back(std::move(std::pair<double,double>(fused_range, lidar_av.second)));
+                continue;
+            }         
+
+            if( yaw >= M_PI )
+                break;
+        }
+        
+        //Create cloud from fused ranges
         result_cloud.header.frame_id = frame_id;     
         fused_points_cloud.header.frame_id = frame_id;
         radar_points_cloud.header.frame_id = frame_id;
@@ -377,9 +372,9 @@ private:
         radar_points_cloud_pub_.publish(radar_points_cloud);        
         lidar_points_cloud_pub_.publish(lidar_points_cloud);
         
-        std::cout <<"Radar contributions: " << radar_points_cloud.points.size()
-                  <<" Lidar: " << lidar_points_cloud.points.size()  
-                  <<" Fused: " << fused_points_cloud.points.size() << std::endl;
+        std::cout <<" Radar contributions: " << radar_points_cloud.points.size()
+                  <<" Lidar contributions: " << lidar_points_cloud.points.size()  
+                  <<" Fused contributions: " << fused_points_cloud.points.size() << std::endl;
 
         //Put all three clouds together      
         result_cloud += fused_points_cloud;
@@ -392,16 +387,16 @@ private:
     }
     //According to the paper the sigma_R is proportional to 1/Pe with Pe received power. Pe should be proportional to 1/R2 ?
     template <typename T>
-    std::pair<double, double> xyToPolar(const T &point){
+    DoublePair xyToPolar(const T &point){
         return std::make_pair<double, double>(dist2Origin(point), pointYaw(point));
     }
     template <typename T>
-    void fromPolarToXY(const std::pair<double, double>  &point , T &xy_point){
+    void fromPolarToXY(const DoublePair  &point , T &xy_point){
         xy_point.x = point.first*cos(point.second);
         xy_point.y = point.first*sin(point.second);
     }
     template <typename T=pcl::PointXYZ>
-    T fromPolarToXY(const std::pair<double, double> &point){
+    T fromPolarToXY(const DoublePair &point){
         T p;
         p.x = point.first*cos(point.second);
         p.y = point.first*sin(point.second);
