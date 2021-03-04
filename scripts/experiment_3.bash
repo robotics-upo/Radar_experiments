@@ -17,7 +17,7 @@ Y=11.22
 A=-1.587
 BAG=$HOME/Humo/miercoles_28oct/2020-10-28-11-56-26_3.bag
 
-roslaunch radar_experiments localize_gt.launch bag_file:=$BAG stats_file:=stats_gt_3.txt
+# roslaunch radar_experiments localize_gt.launch bag_file:=$BAG stats_file:=stats_gt_3.txt
 
 until [ $CONTADOR -gt $2 ]; do
   roslaunch radar_experiments localize_lidar.launch initial_x:=$X initial_y:=$Y initial_a:=$A bag_file:=$BAG stats_file:=stats_lidar_3_$CONTADOR.txt

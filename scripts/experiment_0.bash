@@ -20,7 +20,8 @@ A=-1.59
 
 until [ $CONTADOR -gt $2 ]; do
   roslaunch radar_experiments localize_lidar.launch initial_x:=$X initial_y:=$Y initial_a:=$A bag_file:=$HOME/Humo/miercoles_28oct/2020-10-28-11-26-44_0.bag stats_file:=stats_lidar_0_$CONTADOR.txt
-  roslaunch radar_experiments localize_radar.launch initial_x:=$X initial_y:=$Y initial_a:=$A bag_file:=$HOME/Humo/miercoles_28oct/2020-10-28-11-26-44_0.bag stats_file:=stats_radar_0_$CONTADOR.txt
+  # roslaunch radar_experiments localize_radar.launch initial_x:=$X initial_y:=$Y initial_a:=$A bag_file:=$HOME/Humo/miercoles_28oct/2020-10-28-11-26-44_0.bag stats_file:=stats_radar_0_$CONTADOR.txt
+  # The radar was not available on 0 experiments
   let CONTADOR+=1
 done
 

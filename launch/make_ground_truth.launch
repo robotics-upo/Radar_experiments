@@ -1,0 +1,87 @@
+<launch>
+    <param name="use_sim_time" value="true"/>
+
+    <!-- Bag file args -->
+    <arg name="bag_file" default="$(env HOME)/2020-11-11-13-03-27_mapping_corcho1.bag"/>
+    <arg name="rate" default="0.5"/>
+    <arg name="use_bag_tf" default="false"/>
+    <arg name="add_variance" default="0.0"/>
+
+    <!-- ARUCO Detect Args -->
+    <arg name="camera_1" default="usb_cam_front" />
+    <arg name="dictionary" default="16"/>
+    <arg name="fiducial_len" default="0.185"/>
+    <arg name="fiducial_len_override" default="1-6:0.04"/>
+    <arg name="ignore_fiducials" default="500-1024,0-399"/>
+    <arg name="detect_aruco_back" default="true"/>
+    <arg name="transport" default="compressed"/>
+    <arg name="image" default="image_flipped"/>
+    <arg name="do_pose_estimation" default="true"/>
+    
+    <!-- Odom Type-->
+    <arg name="aloam_odom" default="true"/>
+    
+
+    <!-- SLAM Parameters -->
+    <arg name="fid_slam" default="true"/>
+    <arg name="read_only_map" default="false"/>
+    <arg name="map_name" default="map_aruco_sotano_v1.txt"/>
+    <arg name="map_file" default="$(find radar_experiments)/maps/$(arg map_name)"/>
+    <arg name="map_frame" default="map"/>
+    <arg name="odom_frame" default="odom"/>
+    <arg name="base_frame" default="base_link"/>
+    <arg name="update_secs" default="10000"/>
+    <arg name="dump_file" default="$(find radar_experiments)/stats_g2o.txt"/>
+    <!-- Static TF -->
+    <include file="$(dirname)/frames.launch"/>
+
+    <!-- Uncompress Camera Images -->
+    <node pkg="image_transport" type="republish" name="front_repub" args="compressed in:=/$(arg camera_1)/$(arg image) raw out:=/$(arg camera_1)/$(arg image)"/>
+
+    <!-- BAG Player -->
+    <!-- Without the own tf of the bag -->
+    <node pkg="rosbag" type="play" name="play" args="$(arg bag_file) --clock --rate $(arg rate)" >
+        <remap from="/tf" to="/not_used_tf" unless="$(arg use_bag_tf)"/>
+        <remap from="/tf_static" to="/tf_static_not_used" unless="$(arg use_bag_tf)"/>
+    </node>
+
+    <include file="$(find cloud_concatenator)/launch/concatenator.launch"/>
+
+    <!-- Aruco detect for front camera -->
+
+    <node pkg="aruco_detect" name="aruco_detect_$(arg camera_1)" type="aruco_detect" respawn="false">
+        <param name="image_transport" value="$(arg transport)"/>
+        <param name="publish_images" value="true" />
+        <param name="fiducial_len" value="$(arg fiducial_len)"/>
+        <param name="dictionary" value="$(arg dictionary)"/>
+        <param name="do_pose_estimation" value="$(arg do_pose_estimation)"/>
+        <param name="ignore_fiducials" value="$(arg ignore_fiducials)"/>
+        <param name="fiducial_len_override" value="$(arg fiducial_len_override)"/>
+        <remap from="/camera" to="$(arg camera_1)/$(arg image)"/>
+        <remap from="/camera/compressed" to="$(arg camera_1)/$(arg image)/compressed"/>
+        <remap from="/camera_info" to="$(arg camera_1)/camera_info"/>
+        <remap from="/fiducial_images" to="$(arg camera_1)/fiducial_images"/>
+    </node>
+
+    <!-- Odom to tf, to use with MCL -->
+    <node pkg="odom_to_tf" type="odom_to_tf.py" name="odom_to_tf" unless="$(arg aloam_odom)">
+        <param name="laser_frame" value="base_link"/>
+        <param name="rotate_90" value="false"/>
+    </node>
+
+    <include file="$(find nix_launchers)/launch/aloam.launch" if="$(arg aloam_odom)">
+        <arg name="only_odometry" value="true"/>
+    </include>
+
+    <node name="ground_truth" pkg="fiducial_slam" type="g2o_fiducial_slam" output="screen"> <!-- launch-prefix="gdbserver localhost:1337" > -->
+        <param name="odom_frame" value="$(arg odom_frame)"/>
+        <param name="map_frame" value="$(arg map_frame)"/>
+        <param name="base_frame" value="$(arg base_frame)"/>
+        <param name="rot_noise" value="0.02"/>
+        <param name="weighting_scale" value="0.5"/>
+        <param name="update_secs" value="$(arg update_secs)"/>
+        <param name="stats_file" value="$(arg dump_file)"/>
+    </node>
+
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find radar_experiments)/rviz/aruco.rviz"/>
+</launch>
