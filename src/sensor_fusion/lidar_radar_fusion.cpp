@@ -19,13 +19,13 @@
 #include <dynamic_reconfigure/server.h>
 #include <radar_experiments/LidarFusionConfig.h>
 #include <nav_msgs/Odometry.h>
-
+#include <visualization_msgs/Marker.h>
 #include <fstream>
 
 // #define STEP_BY_STEP
 class LidarRadarFuser
 {
-
+    using DoublePair = std::pair<double, double>;
 public:
     LidarRadarFuser(): spinner(2), pointclouds_subs_sync_(NULL)
     {
@@ -50,6 +50,7 @@ public:
         inflated_radar_cloud_pub_   = pnh_.advertise<pcl::PointCloud<pcl::PointXYZI>>("inflated_radar_cloud", 1);
 
         overlapping_dist_pub_       = pnh_.advertise<std_msgs::Float32>("overlapping_distance", 1);
+        ransac_lines_pub_           = pnh_.advertise<visualization_msgs::Marker>("ransac_line_markers", 1);
         
         dynamic_reconf_server_.reset(new dynamic_reconfigure::Server<radar_experiments::LidarFusionConfig>);
         dynamic_recong_cb_f_.reset(new   dynamic_reconfigure::Server<radar_experiments::LidarFusionConfig>::CallbackType);
@@ -126,6 +127,8 @@ public:
                   << "\033[1;31m---------------------------------------------\033[0m" << std::endl;
         if(save_radar_data_)
             radar_data_file_.open ("/home/fali/radar_data.txt");
+
+        configLineMarker(line_markers_);
     }
     ~LidarRadarFuser(){
         if(save_radar_data_){
@@ -141,32 +144,40 @@ public:
 private:
     template<typename T=pcl::PointXYZI>
     pcl::PointCloud<T> processRadar(pcl::PointCloud<T> &points, const std::string _frame_id){
-        typename pcl::PointCloud<T> int_cloud = points;
-        if(inflate_radar_points_from_angular_resolution_){
-            inflateRadarScanByResolution(int_cloud);
-        }
-        std::vector<double> dist_vector;
-        maximum_range_radar_measurement = 0;
-        double range;
-        for (auto &it : int_cloud){
-            range = dist2Origin(it);
-            dist_vector.push_back(range);
-            if(range > maximum_range_radar_measurement) maximum_range_radar_measurement = range;
-        }
         
-        average_range_radar_scan_ = std::accumulate(dist_vector.begin(), dist_vector.end(), 0.0) / dist_vector.size();
+        typename pcl::PointCloud<T> int_cloud = points;
+        std::vector<double> radar_ranges;
+        double radar_max_range = std::numeric_limits<double>::max();
 
-        overlapping_scan_field_r_f_ = average_range_radar_scan_ + beta_ * (maximum_range_radar_measurement - average_range_radar_scan_);
+        if(inflate_radar_points_from_angular_resolution_)
+            inflateRadarScanByResolution(int_cloud);
+        
+        for (auto &it : int_cloud)
+            radar_ranges.push_back(std::move(dist2Origin(it)));
+
+        double average_range_radar_scan_ = std::accumulate(radar_ranges.begin(), radar_ranges.end(), 0.0) / radar_ranges.size();
+        std::cout << "Processed Radar" << std::endl;
+
+        auto max = std::max_element(radar_ranges.begin(), radar_ranges.end());
+        if( max != radar_ranges.end() )
+            radar_max_range = *max;
+        
+        overlapping_scan_field_r_f_ = average_range_radar_scan_ + beta_ * (radar_max_range - average_range_radar_scan_);
+        std::cout << "Processed Radar" << std::endl;
+        
         std_msgs::Float32 overlapping_dist;
         overlapping_dist.data = overlapping_scan_field_r_f_;
         overlapping_dist_pub_.publish(overlapping_dist);
+        std::cout << "Processed Radar" << std::endl;
+
         auto cloud_ransac = applyLineRANSAC(int_cloud, _frame_id, ransac_iterations_radar_, min_ransac_pointcloud_size_radar_, ransac_distance_threshold_radar_);
+        
         if(ransac_iterations_radar_ > 0){
             cloud_ransac.header.frame_id = _frame_id;
             pcl_conversions::toPCL(ros::Time::now(), cloud_ransac.header.stamp);
             radar_ransac_result_pub_.publish(cloud_ransac);
         }
-
+        std::cout << "Processed Radar" << std::endl;
         return cloud_ransac;
     }   
     
@@ -175,7 +186,8 @@ private:
         virtual_2d_scan_cloud_ = extract2DVirtualScans(points, _frame_id);
 
         lidar_ransac_result_cloud_ = applyLineRANSAC(virtual_2d_scan_cloud_, _frame_id, ransac_iterations_lidar_, min_ransac_pointcloud_size_lidar_, ransac_distance_threshold_lidar_);
-        if(ransac_iterations_lidar_>0){
+        
+        if(ransac_iterations_lidar_ > 0){
             lidar_ransac_result_cloud_.header.frame_id = _frame_id;
             pcl_conversions::toPCL(ros::Time::now(), lidar_ransac_result_cloud_.header.stamp);
             lidar_ransac_result_pub_.publish(lidar_ransac_result_cloud_);
@@ -184,16 +196,16 @@ private:
     void pointCloudsCallback(const sensor_msgs::PointCloud2::ConstPtr& lidar_msg,
                              const sensor_msgs::PointCloud2::ConstPtr& radar_msg)
     {   
-        ros::Duration time_diff = lidar_msg->header.stamp - radar_msg->header.stamp;
-        radar_original_frame_ = radar_msg->header.frame_id;
-        // std::cout<< "Time difference: " << time_diff.toSec() << std::endl;
-        //!Store radar clouds in ODOM Frame in acc_radar_clouds_
         sensor_msgs::PointCloud2  radar_msg_odom_frame, radar_msg_lidar_frame;
         pcl::PointCloud<pcl::PointXYZI> radar_cloud_odom, radar_cloud_lidar_frame;
+
+        ros::Duration time_diff = lidar_msg->header.stamp - radar_msg->header.stamp;
+
+        radar_original_frame_ = radar_msg->header.frame_id;
+             
         pcl_ros::transformPointCloud(odom_frame_id_, *radar_msg, radar_msg_odom_frame,tf_listener_);
         pcl::fromROSMsg(radar_msg_odom_frame, radar_cloud_odom);
-        for(auto &it: radar_cloud_odom)
-            acc_radar_clouds_.points.push_back(it);
+        acc_radar_clouds_ += radar_cloud_odom;
         
         if(fuse_only_enhaced_radar_ && !insert_acc_radar_clouds_)  return; //Not enough radar clouds yet, skip
 
@@ -201,6 +213,7 @@ private:
             ROS_WARN("Skipping pair of lidar-radar clouds because they exceed time tolerance %f > %f", time_diff.toSec(), time_tolerance_);
             return;
         }
+
         pcl::fromROSMsg(*lidar_msg, last_lidar_cloud_);
 
         pcl_ros::transformPointCloud(lidar_msg->header.frame_id, *radar_msg, radar_msg_lidar_frame,tf_listener_);
@@ -221,15 +234,20 @@ private:
         //In case two range measurements verify this inequality, calculate R fusion and put it into the result fused cloud
         if(enable_radar_enhancement_ && insert_acc_radar_clouds_ ){
             pcl::PointCloud<pcl::PointXYZI> radar_acc_ransac_result_cloud;
-            auto interm_cloud = processRadar(acc_radar_clouds_, acc_radar_clouds_.header.frame_id);
+            auto interm_cloud = processRadar(acc_radar_clouds_base_frame_, acc_radar_clouds_base_frame_.header.frame_id);
             std::cout << "Interm cloud timestamp: " << interm_cloud.header.stamp << std::endl;
             interm_cloud.header.stamp -=  100000; //! This magic is done to avoid extrapolation into the future TF ERROR (dont know why it happens)
+            
             pcl_ros::transformPointCloud(lidar_msg->header.frame_id, interm_cloud, radar_acc_ransac_result_cloud,tf_listener_);
             radar_acc_ransac_result_cloud.header.frame_id = lidar_msg->header.frame_id;
             pcl_conversions::toPCL(ros::Time::now(), radar_acc_ransac_result_cloud.header.stamp);
+            
             fused_scan_result_ = createFusedCloud(lidar_msg->header.frame_id, lidar_ransac_result_cloud_, radar_acc_ransac_result_cloud);
+            
             std::cout<< "Publishing fused cloud with radar enahcement!" << radar_acc_ransac_result_cloud.points.size() << " /" << fused_scan_result_.points.size() << std::endl;
+            
             insert_acc_radar_clouds_ = false;
+            acc_radar_clouds_.points.clear();
         }else{
             radar_ransac_result_cloud_ = processRadar(last_radar_cloud_lidar_frame_, lidar_msg->header.frame_id);
             fused_scan_result_ = createFusedCloud(lidar_msg->header.frame_id, lidar_ransac_result_cloud_, radar_ransac_result_cloud_);
@@ -240,143 +258,128 @@ private:
                      "  Radar: " << last_radar_cloud_lidar_frame_.points.size() << std::endl <<
                      "  Radar After Ransac: " << radar_ransac_result_cloud_.points.size() << std::endl;
     }
+    //Return pairs of range, theta points that verifies that the yaw 
+    template <typename T>
+    DoublePair searchPointWithYaw(const pcl::PointCloud<T> &_points, const double &_yaw, const double &_tolerance){
+        
+        std::vector<double> r_res, r_yaw;
+        DoublePair p;
+        for(const auto &it: _points){
+            p = xyToPolar(it);
+            if( p.second < _yaw + _tolerance &&
+                p.second > _yaw - _tolerance ){
+                    r_res.push_back(p.first);
+                    r_yaw.push_back(p.second);
+                }
+        }
+        p.first = p.second = 0;
+        if(! r_res.empty() ){
+            p.first  = std::accumulate(r_res.begin(), r_res.end(), 0.0) / r_res.size();
+            p.second = std::accumulate(r_yaw.begin(), r_yaw.end(), 0.0) / r_yaw.size();
+        }
+
+        return p;
+    }
     template<typename T=pcl::PointXYZ, typename U=pcl::PointXYZI>
     pcl::PointCloud<pcl::PointXYZ> createFusedCloud(const std::string &frame_id, const pcl::PointCloud<T> &lidar_cloud, const pcl::PointCloud<U> &radar_cloud){
 
-
-        //It's more efficient to iterate over radar cloud as it has less points that the lidar cloud (? sure ?)
-        std::map<int, std::pair<double, double>> lidar_ranges_polar_coord_map;
-        std::cout<< "Ransac result cloud size: " << lidar_ransac_result_cloud_.points.size() <<std::endl; 
-        int i = 0;
-        std::pair<int, std::pair<double,double>> temp_pair(0,std::pair<double,double>(0,0));
-        // std::pair<int, std::pair<double,double>> temp_pair(0,std::pair<double,double>(lidar_max_range_ + 1,0));
-        //for(int j = 0; j < std::floor(360/yaw_tolerance_); ++j){
-        //    temp_pair.first = j;
-        //    lidar_ranges_polar_coord_map.insert(temp_pair);
-        //}
-        temp_pair.first = 0;
-        for(auto &it: lidar_cloud){//TODO RE THINK ON HOW TO BUILD THIS LIDAR RANGES POLAR COORD MAP (IS LIKE A SENSOR MSG LASER SCAN)
-            ++temp_pair.first;      //I think it's better to build a full scan initialized with all the points at inf. 
-            temp_pair.second = xyToPolar(it); //And after all replace the inf points but the existing values, but the result scan 
-            lidar_ranges_polar_coord_map[temp_pair.first] =  temp_pair.second;
-            // lidar_ranges_polar_coord_map.insert(temp_pair);
-        }
-
-        if( lidar_ranges_polar_coord_map.empty() ) ROS_WARN("Lidar Cloud empty!!!");
-
-        std::vector<std::pair<double, double>> fused_ranges;
-        std::vector<std::pair<double, double>> lidar_ranges;
-        std::vector<std::pair<double, double>> radar_ranges;
-        std::vector<int> fused_lidar_points_list; //Here we store the key numbers of the lidar_ranges_polar_coord_map that have been already inserted anywhere
-                                                  //To avoid duplicated points
-        double radar_point_range;        
-        double fused_range;
-        //TODO There are repeated points pushed inside the final container. FIX
+        pcl::PointCloud<pcl::PointXYZ> result_cloud, fused_points_cloud, radar_points_cloud, lidar_points_cloud;
+        pcl::PointXYZ p;
         
-        for(auto &it: radar_cloud){
-            radar_point_range = dist2Origin(it);
-            if(lidar_ranges_polar_coord_map.empty()) break; //If no lidar cloud, exit and fill the result cloud with the radar poinnts
+        std::vector<DoublePair> lidar_ranges, radar_ranges, fused_ranges;
+        DoublePair lidar_av, radar_av;
+
+        double yaw = - M_PI + yaw_tolerance_/2;
+
+        for(int i = 0; i < std::ceil(2*M_PI/yaw_tolerance_); i++){
             
-            for(auto &lidar_range: lidar_ranges_polar_coord_map){
-                if(std::find(fused_lidar_points_list.begin(), fused_lidar_points_list.end(), lidar_range.first) != fused_lidar_points_list.end()) continue; //Skip lidar point if already considered
-                //!Lidar insertion conditions
-                if( std::fabs( lidar_range.second.first - radar_point_range ) > d_f_ ){
-                    // if(std::find(lidar_ranges.begin(), lidar_ranges.end(), lidar_range) == lidar_ranges.end() )  
-                    lidar_ranges.emplace_back(lidar_range.second);
-                    fused_lidar_points_list.push_back(lidar_range.first);
-                    continue;
-                }
-
-                fused_range = fuseRanges(radar_point_range, radar_dev_, lidar_range.second.first, lidar_dev_);
-
-                if( lidar_range.second.first > overlapping_scan_field_r_f_ && lidar_range.second.first < lidar_max_range_ ){ //120 == infinity
-                    // if(std::find(lidar_ranges.begin(), lidar_ranges.end(), lidar_range) == lidar_ranges.end() )  
-                    lidar_ranges.emplace_back(lidar_range.second);
-                    fused_lidar_points_list.push_back(lidar_range.first);
-                    continue;
-                }
-                if( lidar_range.second.first - radar_point_range > d_f_ && lidar_range.second.first < fused_range){
-                    // if(std::find(lidar_ranges.begin(), lidar_ranges.end(), lidar_range) == lidar_ranges.end() )  
-                    lidar_ranges.emplace_back(lidar_range.second);
-                    fused_lidar_points_list.push_back(lidar_range.first);
-                    continue;
-                }
-                //! Radar Insertion conditions
-                    //? Type I
-                if( lidar_range.second.first - radar_point_range < -1*d_f_ && radar_point_range < overlapping_scan_field_r_f_ ){ //Caso radar un poco mas alejado que lidar
-                    std::pair<double, double> p(radar_point_range, pointYaw(it));
-                    radar_ranges.emplace_back(p);
-                    continue;
-                }
-                    //? Type II
-                if( lidar_range.second.first >= lidar_max_range_ && radar_point_range < lidar_max_range_ ){ //120 == infinity Caso lidar dando infinito(no se da?) 
-                    std::pair<double, double> p(radar_point_range, pointYaw(it));                    //y punto de radar dando algo
-                    radar_ranges.emplace_back(p);
-                    continue;
-                }
-                //! Fused ranges insertion condition
-                if( std::fabs(lidar_range.second.first - radar_point_range) < d_f_ ){
-                    std::pair<double, double> p(fused_range, lidar_range.second.second);
-                    fused_ranges.emplace_back(p);
-                    fused_lidar_points_list.push_back(lidar_range.first);
-                    continue;
-                }                
+            lidar_av = searchPointWithYaw(lidar_cloud, yaw, yaw_tolerance_);
+            radar_av = searchPointWithYaw(radar_cloud, yaw, yaw_tolerance_);
+            yaw += yaw_tolerance_;
+    
+            if( lidar_av.first == 0 && radar_av.first == 0 )
+                continue;
+            
+            if( lidar_av.first != 0 && radar_av.first == 0){
+                lidar_ranges.push_back(lidar_av);
+                continue;
             }
-        }//In case lidar cloud is empty, fill the result cloud with the radar points (VERY HIGH DENSITY SMOKE CASE)
+            if( lidar_av.first == 0 && radar_av.first != 0){
+                radar_ranges.push_back(radar_av);
+                continue;
+            }
+       
+            if( std::fabs( lidar_av.first - radar_av.first ) > d_f_ ){
+                lidar_ranges.emplace_back(lidar_av);
+                continue;
+            }
+
+            double fused_range = fuseRanges(radar_av.first, radarDev(), lidar_av.first, lidarDev(lidar_av.first));
+            if( lidar_av.first > overlapping_scan_field_r_f_ && lidar_av.first < lidar_max_range_ ){ //120 == infinity
+                lidar_ranges.emplace_back(lidar_av);
+                continue;
+            }
+            if( lidar_av.first - radar_av.first > d_f_ && lidar_av.first < fused_range){
+                lidar_ranges.emplace_back(lidar_av);
+                continue;
+            }
+            //! Radar Insertion conditions
+                //? Type I
+            if( lidar_av.first - radar_av.first < -1*d_f_ && radar_av.first < overlapping_scan_field_r_f_ ){ //Caso radar un poco mas alejado que lidar
+                radar_ranges.emplace_back(std::move(DoublePair(radar_av.first, radar_av.second)));
+                continue;
+            }
+                //? Type II
+            if( lidar_av.first >= lidar_max_range_ && radar_av.first < lidar_max_range_ ){ //120 == infinity Caso lidar dando infinito(no se da?) 
+                radar_ranges.emplace_back(std::move(DoublePair(radar_av.first, radar_av.second)));
+                continue;
+            }
+            //! Fused ranges insertion condition
+            if( std::fabs(lidar_av.first - radar_av.first) < d_f_ ){
+                fused_ranges.emplace_back(std::move(std::pair<double,double>(fused_range, lidar_av.second)));
+                continue;
+            }         
+
+            if( yaw >= M_PI )
+                break;
+        }
         
-        if(lidar_ranges_polar_coord_map.empty()){
-            for(auto &it: radar_cloud){
-                radar_point_range = dist2Origin(it);
-                std::pair<double, double> p(radar_point_range, pointYaw(it));
-                radar_ranges.emplace_back(p);
-            }
-        }
-        if(radar_cloud.empty()){
-            for(const auto &it: lidar_ranges_polar_coord_map)
-                lidar_ranges.push_back(it.second);
-        }
-        //Undo ranges calculation-> get x,y points coordinates from polar ones
-
-         //Create cloud from fused ranges
-        pcl::PointCloud<pcl::PointXYZ> result_cloud;
-        pcl::PointCloud<pcl::PointXYZ> fused_points_cloud;
-        pcl::PointCloud<pcl::PointXYZ> radar_points_cloud;
-        pcl::PointCloud<pcl::PointXYZ> lidar_points_cloud;
+        //Create cloud from fused ranges
         result_cloud.header.frame_id = frame_id;     
         fused_points_cloud.header.frame_id = frame_id;
         radar_points_cloud.header.frame_id = frame_id;
         lidar_points_cloud.header.frame_id = frame_id;
 
-        pcl::PointXYZ p;
         p.z = 0;
         //Undo fused ranges cloud
-        for(auto &it: fused_ranges){
-            fromPolarToXY(it, p);
-            fused_points_cloud.push_back(p);
-            result_cloud.push_back(p);
-        }
-        pcl_conversions::toPCL(ros::Time::now(), fused_points_cloud.header.stamp);
-        fused_points_cloud_pub_.publish(fused_points_cloud);
+        for(const auto &it: fused_ranges)
+            fused_points_cloud.push_back(std::move(fromPolarToXY(it)));
+        
         //Undo radar ranges cloud
-        for(auto &it: radar_ranges){
-            fromPolarToXY(it, p);
-            radar_points_cloud.push_back(p);
-            result_cloud.push_back(p);
-        }
-        pcl_conversions::toPCL(ros::Time::now(), radar_points_cloud.header.stamp);
-        radar_points_cloud_pub_.publish(radar_points_cloud);
+        for(const auto &it: radar_ranges)
+            radar_points_cloud.push_back(std::move(fromPolarToXY(it)));
+        
         //Undo lidar ranges cloud
-        for(auto &it: lidar_ranges){
-            fromPolarToXY(it, p);
-            lidar_points_cloud.push_back(p);
-            result_cloud.push_back(p);
-        }
+        for(const auto &it: lidar_ranges)
+            lidar_points_cloud.push_back(std::move(fromPolarToXY(it)));
+        
+
         pcl_conversions::toPCL(ros::Time::now(), lidar_points_cloud.header.stamp);
+        pcl_conversions::toPCL(ros::Time::now(), radar_points_cloud.header.stamp);
+        pcl_conversions::toPCL(ros::Time::now(), fused_points_cloud.header.stamp);
+
+        fused_points_cloud_pub_.publish(fused_points_cloud);
+        radar_points_cloud_pub_.publish(radar_points_cloud);        
         lidar_points_cloud_pub_.publish(lidar_points_cloud);
-        std::cout <<"Radar contributions: " << radar_points_cloud.points.size()
-                  <<" Lidar: " << lidar_points_cloud.points.size()  
-                  <<" Fused: " << fused_points_cloud.points.size() << std::endl;
-        //Put all three clouds together       
+        
+        std::cout <<" Radar contributions: " << radar_points_cloud.points.size()
+                  <<" Lidar contributions: " << lidar_points_cloud.points.size()  
+                  <<" Fused contributions: " << fused_points_cloud.points.size() << std::endl;
+
+        //Put all three clouds together      
+        result_cloud += fused_points_cloud;
+        result_cloud += lidar_points_cloud;
+        result_cloud += radar_points_cloud; 
         pcl_conversions::toPCL(ros::Time::now(), result_cloud.header.stamp);
         final_points_cloud_pub_.publish(result_cloud);
 
@@ -384,15 +387,22 @@ private:
     }
     //According to the paper the sigma_R is proportional to 1/Pe with Pe received power. Pe should be proportional to 1/R2 ?
     template <typename T>
-    std::pair<double, double> xyToPolar(const T &point){
+    DoublePair xyToPolar(const T &point){
         return std::make_pair<double, double>(dist2Origin(point), pointYaw(point));
     }
     template <typename T>
-    void fromPolarToXY(const std::pair<double, double>  &point , T &xy_point){
+    void fromPolarToXY(const DoublePair  &point , T &xy_point){
         xy_point.x = point.first*cos(point.second);
         xy_point.y = point.first*sin(point.second);
     }
-    double radarDev(const pcl::PointXYZ &point){
+    template <typename T=pcl::PointXYZ>
+    T fromPolarToXY(const DoublePair &point){
+        T p;
+        p.x = point.first*cos(point.second);
+        p.y = point.first*sin(point.second);
+        return p;
+    }
+    double radarDev(){
         // return radar_dev_prop_const_ * pow(dist2Origin(point),2);
         return radar_dev_;
     }
@@ -402,9 +412,9 @@ private:
     // 2 - 20 m: ± 1.5 cm
     // 20 - 60 m ± 3 cm
     // >60 m: ± 10 cm
-    double lidarDev(const pcl::PointXYZ &point){
-        //double range = dist2Origin(point);
-        /*if(range < 2.0){
+    double lidarDev(const double &range){
+
+        if(range < 2.0){
             return 0.03;
         }else if(range < 20){
             return 0.015;
@@ -412,8 +422,7 @@ private:
             return 0.03;
         }else{
             return 0.1;
-        }*/
-        return lidar_dev_;
+        }
     }
     template <typename T>
     double dist2Origin(const T &point)
@@ -428,6 +437,22 @@ private:
 
         return atan2(point.y, point.x);
     }
+    template <typename T>
+    void pointToSpherical(const T &_point, double &_rho, double &_theta, double &_phi){
+        _theta = atan2(_point.y, _point.x);
+        _rho   = dist2Origin(_point);
+        _phi   = acos(_point.z/_rho);
+    }
+    template <typename T=pcl::PointXYZI>
+    T sphericalToXY(const double &_rho, const double &_theta, const double &_phi, bool z_zero = true){
+        T p;
+        p.x = _rho * sin(_phi) * cos(_theta);
+        p.y = _rho * sin(_phi) * sin(_theta);
+        if(!z_zero)
+            p.z = _rho * cos(_theta);
+
+        return p;
+    }
     //! Equation 2 in the paper 
     double fuseRanges(const double &r_radar, const double &radar_dev, const double &r_lidar, const double &lidar_dev){
         return r_radar + pow(radar_dev,2) / (pow(lidar_dev,2) + pow(radar_dev, 2)) * (r_lidar - r_radar);
@@ -437,12 +462,11 @@ private:
         //The first step to create this virtual 2D scan is to project all 3D points onto the plane by setting the
         //z-coordinate to zero.
         pcl::PointCloud<pcl::PointXYZ> out;
-        out.header.frame_id = frame_id;
-
-        pcl::PointXYZ point;
-        point.z = 0;
-        double yaw = 0;
         std::vector<pcl::PointXYZ> last_points;
+        pcl::PointXYZ point;
+
+        out.header.frame_id = frame_id;
+        double yaw          = 0;
 
         //A virtual 2D scan that contains primarily walls  can  thereafter  be  assembled  by  taking  one  point  out
         //of  each vertical raw scan (resp. two points for a yawing scan top). This point is chosen to be the one with
@@ -454,7 +478,6 @@ private:
 
             if (last_points.empty())
             {
-                // yaw = atan2(it.y, it.x); //between [-pi,pi]
                 last_points.push_back(point);
             }
             else if (pointYaw(it) < pointYaw(last_points.at(0)) + yaw_tolerance_ &&
@@ -464,16 +487,13 @@ private:
             }
             else
             {
-
                 pcl::PointXYZ final_point;
                 for (auto &it : last_points)
-                {
                     if (dist2Origin(it) > dist2Origin(final_point))
                         final_point = it;
-                }
+                
                 last_points.clear();
                 out.push_back(final_point);
-                // std::cout << "[" << it.x << ", " << it.y << ", "<< yaw << "]"  << std::endl;
             }
         }
         pcl_conversions::toPCL(ros::Time::now(), out.header.stamp);
@@ -486,11 +506,8 @@ private:
                                                    const int _ransac_iterations, const int _min_pointcloud_size, const double _ransac_distance_threshold)
     {
 
-        if(_ransac_iterations == 0){
-            // pcl_conversions::toPCL(ros::Time::now(), cloud.header.stamp);
-            // // ransac_result_pub_.publish(cloud);
+        if(_ransac_iterations == 0)
             return cloud;
-        }
 
         typename pcl::PointCloud<T>::Ptr out_cloud(new pcl::PointCloud<T>);
         typename pcl::PointCloud<T>::Ptr in_intermediate(new pcl::PointCloud<T>);
@@ -526,60 +543,43 @@ private:
             extract.filter(*in_intermediate);
         }
 
-        out_cloud->header.frame_id = frame_id;
-        pcl_conversions::toPCL(ros::Time::now(), out_cloud->header.stamp);
-        ransac_result_pub_.publish(out_cloud);
-
         return *out_cloud;
     }
     //! This functions takes points from a PointCloud and inflated in SPHERICAL coordinates along
     //! the yaw (theta) and elevation(phi) angles resulting in a "spherical shell inflation"
     //! Other possibility is to put all them into a plane
-    template<typename T>
+    template<typename T=pcl::PointXYZI>
     void inflateRadarScanByResolution(pcl::PointCloud<T> &in_cloud){
         //TODO How to check if there is intensity field and forward it?
-        std::cout<< "Inflating Cloud of size: "<< in_cloud.points.size() << std::endl;
+        
         typename pcl::PointCloud<T> int_cloud;
-        int_cloud.header = in_cloud.header;
         T point;
-        int k1; //Yaw(theta)
-        int k2; //Azimuth (phi)
-        int k3; //Range(m)
-        double theta, phi, rho;
-        double theta_n, phi_n, rho_n;
+        int k1,k2,k3; //Yaw(theta)//Azimuth (phi)//Range(m)
+        double theta_n, phi_n, rho_n,theta, phi, rho;
+
+        int_cloud.header = in_cloud.header;
 
         for(auto &it: in_cloud){
-            theta = atan2(it.y, it.x);
-            rho = dist2Origin(it);
-            phi  = acos(it.z/rho);
-            k1 = std::fabs(std::round(2*rho*sin(radar_angular_resolution_yaw_) / point_step_));
-            k2 = std::fabs(std::round(2*rho*sin(radar_angular_resolution_azimuth_) / point_step_));
-            k3 = std::fabs(std::round(radar_dev_ / point_step_));
+            pointToSpherical(it, rho,theta,phi);
+            k1    = std::fabs(std::round(2*rho*sin(radar_angular_resolution_yaw_) / point_step_));
+            k2    = std::fabs(std::round(2*rho*sin(radar_angular_resolution_azimuth_) / point_step_));
+            k3    = std::fabs(std::round(radar_dev_ / point_step_));
             if(k1 % 2 != 0) k1 -= 1; 
             if(k2 % 2 != 0) k2 -= 1; 
             if(k1 < 2) k1 = 2;
             if(k2 < 2) k2 = 2;
-            // std::cout << "K1, K2, Rho: [" << k1 << ", " << k2 << ", " << rho << "] " <<std::endl;
             for(int k = -k3; k <= k3; k++){
                 rho_n = rho + k * point_step_;
                 for(int i = 0; i < k1; i++ ){
                     theta_n = theta - radar_angular_resolution_yaw_/2 + i * radar_angular_resolution_yaw_/k1;
-                    // std::cout << "Theta_n:" << theta_n << std::endl;
                     for(int j = 0; j < k2; j++ ){
-                        // std::cout << "j / k" << j << "/ " << k2 << "  Phi_n:" << phi_n << std::endl;
                         phi_n   = phi  - radar_angular_resolution_azimuth_/2 + j* radar_angular_resolution_azimuth_/k2;
-                        point.x = rho_n * sin(phi_n ) * cos(theta_n);
-                        point.y = rho_n * sin(phi_n ) * sin(theta_n);
-                        // point.z = rho_n * cos(phi_n );
-                        // point.intensity = it.;
-                        int_cloud.points.push_back(point);   
-                        // std::cout << "Adding [" << point.x << ", " << point.y << "," << point.z << "] to [" << it.x << ", " << it.y << "," << it.z << "]" << std::endl;
+                        int_cloud.points.push_back(std::move(sphericalToXY<T>(rho_n,theta_n,phi_n)));   
                     }
                 }
             }
-
         }
-        // std::cout << "Publisihing inflated pointcloud in frame: " << in_cloud.header.frame_id << std::endl; 
+
         pcl_conversions::toPCL(ros::Time::now(), int_cloud.header.stamp);
         inflated_radar_cloud_pub_.publish(int_cloud);
         in_cloud = int_cloud;
@@ -606,7 +606,10 @@ private:
     }
     void odomCallback(const nav_msgs::Odometry::ConstPtr &msg){
 
-        if(!enable_radar_enhancement_) return;
+        if(!enable_radar_enhancement_){
+            odom_sub_.shutdown();
+            return;
+        }
 
         double d_yaw = std::fabs(atan2(msg->pose.pose.position.y,msg->pose.pose.position.x) - first_yaw_); 
 
@@ -625,8 +628,9 @@ private:
             
             pcl_conversions::toPCL(ros::Time::now(), acc_radar_clouds_base_frame_.header.stamp);
             accumulated_radar_cloud_pub_.publish(acc_radar_clouds_base_frame_);
+
             odom_msgs_.clear();
-            acc_radar_clouds_.points.clear();
+            
             first_odom_time_         = ros::Time::now();
             new_odom_vec_            = true;
             insert_acc_radar_clouds_ = true;
@@ -636,7 +640,26 @@ private:
         std::cout << "Odom msgs size: " << odom_msgs_.size() << std::endl;
         
     }
-
+    void configLineMarker(visualization_msgs::Marker &_marker){
+        _marker.header.frame_id = robot_base_frame_id_;
+        _marker.header.stamp = ros::Time::now();
+        _marker.ns = "sensor_fusion";
+        _marker.id = 0;
+        _marker.type = visualization_msgs::Marker::LINE_LIST;
+        _marker.action = visualization_msgs::Marker::ADD;
+        _marker.pose.position.x = 1;
+        _marker.pose.position.y = 1;
+        _marker.pose.position.z = 1;
+        _marker.pose.orientation.x = 0.0;
+        _marker.pose.orientation.y = 0.0;
+        _marker.pose.orientation.z = 0.0;
+        _marker.pose.orientation.w = 1.0;
+        _marker.scale.x = 0.1;
+        _marker.color.a = 1.0; // Don't forget to set the alpha!
+        _marker.color.r = 0.0;
+        _marker.color.g = 1.0;
+        _marker.color.b = 1.0;
+    }
     //
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, sensor_msgs::PointCloud2> LidarRadarSyncPolicy; 
     
@@ -656,6 +679,7 @@ private:
     ros::Publisher  final_points_cloud_pub_;
     ros::Publisher  accumulated_radar_cloud_pub_;
     ros::Publisher  inflated_radar_cloud_pub_;
+    ros::Publisher  ransac_lines_pub_;
     tf::TransformListener tf_listener_;
 
     std::unique_ptr<dynamic_reconfigure::Server<radar_experiments::LidarFusionConfig>> dynamic_reconf_server_;
@@ -681,8 +705,6 @@ private:
     pcl::PointCloud<pcl::PointXYZI> acc_radar_clouds_base_frame_;
     //!Calculated params
     double overlapping_scan_field_r_f_;//Calculated at every fusion cycle
-    double average_range_radar_scan_;
-    double maximum_range_radar_measurement;
     //! Standard deviation of sensors
     double radar_dev_;
     double lidar_dev_;
@@ -716,6 +738,8 @@ private:
     double radar_angular_resolution_azimuth_;
     double point_step_;
     std::string radar_original_frame_;
+
+    visualization_msgs::Marker line_markers_;
 };
 int main(int argc, char **argv)
 {
