@@ -6,8 +6,8 @@
 
 
     <!-- Bag file args -->
-    <arg name="bag_file" default="$(env HOME)/2020-11-11-13-14-47_mapping_corcho2.bag"/>
-    <!-- <arg name="bag_file" default="$(env HOME)/2020-11-11-13-03-27_mapping_corcho1.bag"/> -->
+    <!-- <arg name="bag_file" default="$(env HOME)/2020-11-11-13-14-47_mapping_corcho2.bag"/> -->
+    <arg name="bag_file" default="$(env HOME)/2020-11-11-13-03-27_mapping_corcho1.bag"/>
     <arg name="rate" default="0.5"/>
     <arg name="use_bag_tf" default="false"/>
     <arg name="add_variance" default="0.0"/>
@@ -81,6 +81,8 @@
     <!-- ALOAM Odom if necessary -->
     <include file="$(dirname)/aloam_odom.launch" if="$(arg aloam_odom)"/>
 
+
+    <arg name="max_observation_distance" default="1.5"/>
     <node name="ground_truth" pkg="fiducial_slam" type="g2o_fiducial_slam" output="screen"> <!-- launch-prefix="gdbserver localhost:1337" > -->
         <param name="odom_frame" value="$(arg odom_frame)"/>
         <param name="map_frame" value="$(arg map_frame)"/>
@@ -89,7 +91,8 @@
         <param name="weighting_scale" value="0.5"/>
         <param name="update_secs" value="$(arg update_secs)"/>
         <param name="stats_file" value="$(arg dump_file)"/>
-        <param name="emit_tf" value="false"/>
+        <param name="do_slam" value="false"/>
+        <param name="max_observation_distance" value="$(arg max_observation_distance)"/>
     </node>
 
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(find radar_experiments)/rviz/aruco.rviz"/>
@@ -138,12 +141,15 @@
       <param name="max_particles"             value="5000"/>
       <param name="kld_err"                   value="0.05"/>
       <param name="kld_z"                     value="0.99"/>
-      <param name="odom_alpha1"               value="0.6"/>
-      <param name="odom_alpha2"               value="0.6"/>
-      <!-- translation std dev, m -->
-      <param name="odom_alpha3"               value="0.5"/>
-      <param name="odom_alpha4"               value="0.5"/>
-      <param name="odom_alpha5"               value="0.1"/>
+      <param name="odom_alpha1"               value="1.0" unless="$(arg aloam_odom)"/>
+      <param name="odom_alpha2"               value="1.0" unless="$(arg aloam_odom)"/>
+      <param name="odom_alpha3"               value="1.0" unless="$(arg aloam_odom)"/>
+      <param name="odom_alpha4"               value="1.0" unless="$(arg aloam_odom)"/>
+      <param name="odom_alpha1"               value="0.2" if="$(arg aloam_odom)"/>
+      <param name="odom_alpha2"               value="0.2" if="$(arg aloam_odom)"/>
+      <param name="odom_alpha3"               value="0.2" if="$(arg aloam_odom)"/>
+      <param name="odom_alpha4"               value="0.2" if="$(arg aloam_odom)"/>
+      <param name="odom_alpha5"               value="0.4"/>
       <param name="laser_z_hit"               value="0.5"/>
       <param name="laser_z_short"             value="0.05"/>
       <param name="laser_z_max"               value="0.05"/>
