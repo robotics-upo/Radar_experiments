@@ -6,8 +6,8 @@
 
 
     <!-- Bag file args -->
-    <!-- <arg name="bag_file" default="$(env HOME)/2020-11-11-13-14-47_mapping_corcho2.bag"/> -->
-    <arg name="bag_file" default="$(env HOME)/2020-11-11-13-03-27_mapping_corcho1.bag"/>
+    <arg name="bag_file" default="$(env HOME)/2020-11-11-13-14-47_mapping_corcho2.bag"/>
+    <!-- <arg name="bag_file" default="$(env HOME)/2020-11-11-13-03-27_mapping_corcho1.bag"/> -->
     <arg name="rate" default="0.5"/>
     <arg name="use_bag_tf" default="false"/>
     <arg name="add_variance" default="0.0"/>
@@ -39,7 +39,7 @@
     <arg name="map_frame" default="map"/>
     <arg name="odom_frame" default="odom"/>
     <arg name="base_frame" default="base_link"/>
-    <arg name="update_secs" default="10000"/>
+    <arg name="update_secs" default="3"/>
     <arg name="dump_file" default="$(find radar_experiments)/stats_g2o.txt"/>
     <!-- Static TF -->
     <include file="$(dirname)/frames.launch"/>
@@ -83,7 +83,7 @@
 
 
     <arg name="max_observation_distance" default="1.5"/>
-    <node name="ground_truth" pkg="fiducial_slam" type="g2o_fiducial_slam" output="screen"> <!-- launch-prefix="gdbserver localhost:1337" > -->
+    <node name="ground_truth" pkg="fiducial_slam" type="g2o_fiducial_map" output="screen"> <!-- launch-prefix="gdbserver localhost:1337" > -->
         <param name="odom_frame" value="$(arg odom_frame)"/>
         <param name="map_frame" value="$(arg map_frame)"/>
         <param name="base_frame" value="$(arg base_frame)"/>
