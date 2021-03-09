@@ -4,18 +4,17 @@
 
     <arg name="launch_static_tf"       default="true"/>
     <arg name="launch_rqt_reconfigure" default="true"/>
-    <arg name="launch_mcl2d"           default="true"/>
     <arg name="play_bag"               default="true"/>
     <arg name="sec"                    default="30"/>
     <arg name="rate"                   default="1"/>
-    <arg name="bag_name"               default="2020-11-11-13-03-27_mapping_corcho1.bag"/>
-    <!-- <arg name="bag_name"               default="2020-12-01-12-04-38_nocams_front_cam_noodomtf.bag"/> -->
+    <!-- <arg name="bag_name"               default="2020-11-11-13-03-27_mapping_corcho1.bag"/> -->
+    <arg name="bag_name"               default="2020-12-01-12-04-38_nocams_front_cam_noodomtf.bag"/>
     <!-- <arg name="bag_name"               default="2020-12-01-11-36-21_front_cam_nodomtf2.bag"/> -->
     <!-- <arg name="bag_name"               default="2020-12-01-10-45-22_front_cam_odomtf.bag   "/> -->
     <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name)"/>
     
     <node name="bag_player" type="play" pkg="rosbag" 
-          args="$(arg bag_file) --pause -r $(arg rate) --clock -s $(arg sec) -q -l" 
+          args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) -q -l" 
           output="screen" if="$(arg play_bag)"/>
 
      <!-- MCL2D initial position -->
@@ -93,7 +92,7 @@
     <arg name="angular_resolution_azimuth"              default="1.0"/>
     <arg name="point_step"                              default="0.08"/>
 
-    <node name="lidar_radar_fusion_node" type="lidar_radar_fusion_node" pkg="radar_experiments" output="screen" > 
+    <node name="lidar_radar_fusion_node" type="lidar_radar_fusion_node" pkg="radar_experiments" > 
         <remap from="lidar_points"                           to="/os1_cloud_node/points_non_dense"/>
         <remap from="radar_points"                           to="/$(arg radar_full_cloud_topic_name)"/>
         <param name="yaw_tolerance"                          value="$(arg yaw_tolerance)"/>
@@ -138,21 +137,20 @@
 
     <!-- MCL 2D Stuff -->
     <arg name="map2d_name"     default="tunel2d_map4"/>
-    <arg name="avoid_imu_odom" default="true"/>
+    <arg name="use_imu" default="false"/>
 
     <node pkg="map_server" name="map_server" type="map_server" args="$(find radar_experiments)/maps/$(arg map2d_name).yaml"/>
 
-    <node pkg="odom_to_tf" type="odom_to_tf.py" name="odom_to_tf" if="$(eval arg('launch_mcl2d') and not arg('avoid_imu_odom'))"> 
-	  <param name="laser_frame" value="base_link"/>
-	  <param name="rotate_90" value="false"/>
-    </node> 
-
-    <!-- This node susbcribes to /idmind_motors/wheel_odom and publishes /odom topic and tf from odom to base link without reading imu -->
-    <node pkg="idmind_navigation" type="odometry_node.py" name="odometry_node_idmind" if="$(arg avoid_imu_odom)">
-        <param name="/bot/base_width" value="0.7"/>
+    <!-- Odometry ticks pure. This node susbcribes to /idmind_motors/wheel_odom and publishes /odom topic and tf from odom to base link without reading imu -->
+    <node pkg="idmind_navigation" type="odometry_node.py" name="odometry_node_ticks" unless="$(arg use_imu)">
+        <param name="/bot/base_width" value="0.65"/>
     </node>
 
-    <node pkg="amcl" type="amcl" name="amcl" output="screen" if="$(arg launch_mcl2d)">
+    <node pkg="radar_experiments" type="upo_odometry.py" name="odometry_node_imu" if="$(arg use_imu)" output="screen">
+        <param name="use_imu" value="2"/>
+    </node>
+
+    <node pkg="amcl" type="amcl" name="amcl">
       <!-- Publish scans from best pose at a max of 10 Hz -->
       <remap from="scan"                      to="/lidar_radar_fusion_node/result_laser_scan"/>
       <param name="initial_pose_x"            value="$(arg initial_pose_x)"/>
@@ -165,15 +163,15 @@
       <param name="transform_tolerance"       value="0.2" />
       <param name="gui_publish_rate"          value="10.0"/>
       <param name="laser_max_beams"           value="60"/>
-      <param name="min_particles"             value="500"/>
+      <param name="min_particles"             value="1500"/>
       <param name="max_particles"             value="5000"/>
       <param name="kld_err"                   value="0.05"/>
       <param name="kld_z"                     value="0.99"/>
-      <param name="odom_alpha1"               value="0.5"/>
-      <param name="odom_alpha2"               value="0.2"/>
+      <param name="odom_alpha1"               value="0.7"/>
+      <param name="odom_alpha2"               value="0.7"/>
       <!-- translation std dev, m -->
-      <param name="odom_alpha3"               value="0.05"/>
-      <param name="odom_alpha4"               value="0.05"/>
+      <param name="odom_alpha3"               value="0.6"/>
+      <param name="odom_alpha4"               value="0.6"/>
       <param name="odom_alpha5"               value="0.1"/>
       <param name="laser_z_hit"               value="0.5"/>
       <param name="laser_z_short"             value="0.05"/>
@@ -204,15 +202,16 @@
 
     <arg name="pi/2" value="1.5707963267948966"/>
 
-    <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="os1_sensor_broadcaster" args="0.1 0 0.40 0 0 0               base_link  os1_sensor            2"/>
+
+    <include file="$(find radar_experiments)/launch/frames.launch" if="$(arg launch_static_tf)"/>
+    <!-- <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="os1_sensor_broadcaster" args="0.1 0 0.40 0 0 0               base_link  os1_sensor            2"/>
     <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="tf_lidar"               args="0 0.0 0.03618 3.14 0.0 0.0     os1_sensor os1_lidar             2"/>
     <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="tf_radar_front"         args="0.09 0.04 -0.08 0 0 0          os1_sensor ti_mmwave_front_radar 2"/>
     <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="tf_radar_rear"          args="-0.33 0.05 -0.2 $(arg pi) 0 0  os1_sensor ti_mmwave_rear_radar  2"/>
     <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="tf_radar_right"         args="0 -0.05 -0.05 -$(arg pi/2) 0 0 os1_sensor ti_mmwave_right_radar 2"/>
-    <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="tf_radar_left"          args="0 0.05 -0.05 $(arg pi/2) 0 0   os1_sensor ti_mmwave_left_radar  2"/>
+    <node if="$(arg launch_static_tf)" pkg="tf" type="static_transform_publisher" name="tf_radar_left"          args="0 0.05 -0.05 $(arg pi/2) 0 0   os1_sensor ti_mmwave_left_radar  2"/> -->
 
 <!-- Ground truth stuff!! -->
-    <arg name="map_fiducials"           default="true"/>
     <arg name="camera_1"           default="usb_cam_front"/>
     <arg name="image"           default="image_flipped"/>
     <arg name="fiducial_len"    default="0.18"/>
@@ -235,11 +234,12 @@
         <remap from="/fiducial_images" to="$(arg camera_1)/fiducial_images"/>
     </node>
 
-    <node name="gt_saver" pkg="radar_experiments" type="calculate_ground_truth.py" output="screen" unless="$(arg map_fiducials)"/>
+    <node name="gt_saver" pkg="radar_experiments" type="calculate_ground_truth.py" output="screen"/>
 
-    <include file="$(find fiducial_slam)/launch/fiducial_slam.launch" unless="$(arg map_fiducials)">
+    <include file="$(find fiducial_slam)/launch/fiducial_slam.launch">
         <arg name="map_file" value="$(find radar_experiments)/maps/map_gt.txt"/>
         <arg name="read_only_map" value="true"/>
+        <arg name="publish_tf" value="false"/>
     </include>
 
 </launch>
