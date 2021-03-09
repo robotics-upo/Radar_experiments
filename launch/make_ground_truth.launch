@@ -17,7 +17,7 @@
     <arg name="dictionary" default="16"/>
     <arg name="fiducial_len" default="0.18"/>
     <arg name="fiducial_len_override" default="1-6:0.04"/>
-    <arg name="ignore_fiducials" default="500-1024,0-399"/>
+    <arg name="ignore_fiducials" default="501-1024,0-399"/>
     <arg name="detect_aruco_back" default="true"/>
     <arg name="image" default="image_flipped"/>
     <arg name="do_pose_estimation" default="true"/>
@@ -26,8 +26,14 @@
     <arg name="aloam_odom" default="true"/>
 
     <!-- This node susbcribes to /idmind_motors/wheel_odom and publishes /odom topic and tf from odom to base link without reading imu -->
-    <node pkg="idmind_navigation" type="odometry_node.py" name="odometry_node_idmind" unless="$(arg aloam_odom)">
-        <param name="/bot/base_width" value="0.7"/>
+    <!-- <node pkg="idmind_navigation" type="odometry_node.py" name="odometry_node_idmind" unless="$(arg aloam_odom)" output="screen">
+        <param name="/bot/base_width" value="0.67"/>
+        <param name="use_imu" value="2"/>
+    </node> -->
+
+    <node pkg="radar_experiments" type="upo_odometry.py" name="odometry_node_idmind" unless="$(arg aloam_odom)" output="screen">
+        <param name="/bot/base_width" value="0.67"/>
+        <param name="use_imu" value="2"/>
     </node>
     
 
@@ -39,7 +45,7 @@
     <arg name="map_frame" default="map"/>
     <arg name="odom_frame" default="odom"/>
     <arg name="base_frame" default="base_link"/>
-    <arg name="update_secs" default="3"/>
+    <arg name="update_secs" default="2"/>
     <arg name="dump_file" default="$(find radar_experiments)/stats_g2o.txt"/>
     <!-- Static TF -->
     <include file="$(dirname)/frames.launch"/>
@@ -49,7 +55,7 @@
 
     <!-- BAG Player -->
     <!-- Without the own tf of the bag -->
-    <arg name="start" default="15.0"/>
+    <arg name="start" default="0.0"/>
     <node pkg="rosbag" type="play" name="play" args="$(arg bag_file) -s $(arg start) --clock -r $(arg rate)" >
         <remap from="/tf" to="/not_used_tf" unless="$(arg use_bag_tf)"/>
         <remap from="/tf_static" to="/tf_static_not_used" unless="$(arg use_bag_tf)"/>
@@ -82,8 +88,8 @@
     <include file="$(dirname)/aloam_odom.launch" if="$(arg aloam_odom)"/>
 
 
-    <arg name="max_observation_distance" default="1.5"/>
-    <node name="ground_truth" pkg="fiducial_slam" type="g2o_fiducial_map" output="screen"> <!-- launch-prefix="gdbserver localhost:1337" > -->
+    <arg name="max_observation_distance" default="3.0"/>
+    <node name="ground_truth" pkg="fiducial_slam" type="g2o_fiducial_map" > <!-- launch-prefix="gdbserver localhost:1337" > -->
         <param name="odom_frame" value="$(arg odom_frame)"/>
         <param name="map_frame" value="$(arg map_frame)"/>
         <param name="base_frame" value="$(arg base_frame)"/>

@@ -39,7 +39,7 @@ class IDMindOdometry:
         self.base_width = rospy.get_param("/bot/base_width", default=0.26)
         self.simulation = rospy.get_param("/simulation", default=False)
         self.control_freq = rospy.get_param("/move_base/controller_frequency", default=20.)
-        self.use_imu = rospy.get_param("/use_imu", default=0)
+        self.use_imu = rospy.get_param("~use_imu", default=2)
         self.publish_tf = rospy.get_param("/publish_tf", default=True) # UPO: added to switch between mapping and navigation
         self.yaw = 0
 
