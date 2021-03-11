@@ -1,0 +1,32 @@
+<launch>
+    <arg name="use_async_concatenator"      default="true"/>
+    <arg name="radar_full_cloud_topic_name" default="radarConcatenatedCloud"/>
+    
+    <arg name="cloud_1" default="/ti_mmwave_front_radar/radar_scan_pcl"/>
+    <arg name="cloud_2" default="/ti_mmwave_left_radar/radar_scan_pcl"/>
+    <arg name="cloud_3" default="/ti_mmwave_right_radar/radar_scan_pcl"/>
+    <arg name="cloud_4" default="/ti_mmwave_rear_radar/radar_scan_pcl"/>
+
+    <node name="async_cloud_concatenator" pkg="cloud_concatenator" type="async_concatenator_node" if="$(arg use_async_concatenator)">
+        <remap from="cloud1"       to="$(arg cloud_1)"/>
+        <remap from="cloud2"       to="$(arg cloud_2)"/>
+        <remap from="cloud3"       to="$(arg cloud_3)"/>
+        <remap from="cloud4"       to="$(arg cloud_4)"/>
+        <remap from="full_cloud" to="$(arg radar_full_cloud_topic_name)"/>
+        <param name="frequency"    value="10"/>
+        <param name="target_frame" value="ti_mmwave_front_radar"/>
+    </node>
+
+    <arg name="n_clouds" default="4"/>
+
+    <node name="cloud_concatenator" pkg="cloud_concatenator" type="cloud_concatenator_node" unless="$(arg use_async_concatenator)">
+        <param name="n_clouds" value="$(arg n_clouds)"/>
+        <remap from="pc_1" to="$(arg cloud_1)"/>
+        <remap from="pc_2" to="$(arg cloud_2)"/>
+        <remap from="pc_3" to="$(arg cloud_3)"/>
+        <remap from="pc_4" to="$(arg cloud_4)"/>
+        <remap from="concatenatedCloud" to="$(arg radar_full_cloud_topic_name)"/>
+    </node>
+
+
+</launch>

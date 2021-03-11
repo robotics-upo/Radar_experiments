@@ -1,0 +1,85 @@
+<launch>
+
+<!-- Sync policy param -->
+    <arg name="sychronization_margin"             default="10"/>
+    <arg name="time_tolerance"                    default="0.3"/>
+
+    <!-- Virtual 2D Scan extraction Config -->
+    <arg name="yaw_tolerance"                     default="0.08"/>
+
+    <!-- RANSAC Config -->
+        <!-- Lidar -->
+    <arg name="lidar_ransac_distance_threshold"         default="0.04"/>
+    <arg name="lidar_ransac_iterations"                 default="0"/>
+    <arg name="lidar_min_ransac_pointcloud_size"        default="50"/>
+        <!-- Radar -->
+    <arg name="radar_ransac_distance_threshold"         default="0.05"/>
+    <arg name="radar_ransac_iterations"                 default="5"/> <!-- Set to 0 to disable-->
+    <arg name="radar_min_ransac_pointcloud_size"        default="40"/>
+
+    <!-- Third step -->
+    <arg name="beta"                                    default="0.5"/> <!-- According to paper, beta varies between 0 and 1 -->
+    <arg name="distance_threshold"                      default="0.1"/> <!-- Parameter dF of the paper -->
+
+    <!-- Radar and Lidar standard deviations -->
+    <arg name="radar_dev"                               default="0.1"/> 
+    <arg name="lidar_dev"                               default="0.1"/> 
+    <arg name="lidar_max_range"                         default="120.0"/> <!-- Useful when lidar pointclouds publishes ranges with Inf values. Ouster lidar I think does not do-->
+
+    <arg name="enable_radar_enhancement"                default="false"/>
+    <arg name="fuse_only_enhaced_radar"                 default="false"/> 
+    <arg name="max_radar_acc_yaw_incr"                  default="0.4"/> 
+    <arg name="max_radar_acc_time"                      default="0.5"/> 
+
+    <!-- Radar Points inflation using angular resolutions -->
+    <arg name="inflate_radar_points_with_resolution"    default="true"/>
+    <arg name="angular_resolution_yaw"                  default="8.0"/>
+    <arg name="angular_resolution_azimuth"              default="1.0"/>
+    <arg name="point_step"                              default="0.08"/>
+    <arg name="radar_full_cloud_topic_name" default="radarConcatenatedCloud"/>
+
+
+    <node name="lidar_radar_fusion_node" type="lidar_radar_fusion_node" pkg="radar_experiments" > 
+        <remap from="lidar_points"                           to="/os1_cloud_node/points_non_dense"/>
+        <remap from="radar_points"                           to="/$(arg radar_full_cloud_topic_name)"/>
+        <param name="yaw_tolerance"                          value="$(arg yaw_tolerance)"/>
+        <param name="lidar_ransac_distance_threshold"        value="$(arg lidar_ransac_distance_threshold)"/>
+        <param name="lidar_ransac_iterations"                value="$(arg lidar_ransac_iterations)"/>
+        <param name="lidar_min_ransac_pointcloud_size"       value="$(arg lidar_min_ransac_pointcloud_size)"/>
+        <param name="radar_ransac_distance_threshold"        value="$(arg radar_ransac_distance_threshold)"/>
+        <param name="radar_ransac_iterations"                value="$(arg radar_ransac_iterations)"/>
+        <param name="radar_min_ransac_pointcloud_size"       value="$(arg radar_min_ransac_pointcloud_size)"/>
+        <param name="beta"                                   value="$(arg beta)"/>
+        <param name="distance_threshold"                     value="$(arg distance_threshold)"/>
+        <param name="sychronization_margin"                  value="$(arg sychronization_margin)"/>
+        <param name="time_tolerance"                         value="$(arg time_tolerance)"/>
+        <param name="radar_dev"                              value="$(arg radar_dev)"/>
+        <param name="enable_radar_enhancement"               value="$(arg enable_radar_enhancement)"/>
+        <param name="fuse_only_enhaced_radar"                value="$(arg fuse_only_enhaced_radar)"/>
+        <param name="max_radar_acc_yaw_incr"                 value="$(arg max_radar_acc_yaw_incr)"/>
+        <param name="max_radar_acc_time"                     value="$(arg max_radar_acc_time)"/>
+        <param name="inflate_radar_points_with_resolution"   value="$(arg inflate_radar_points_with_resolution)"/>
+        <param name="angular_resolution_yaw"                 value="$(arg angular_resolution_yaw)"/>
+        <param name="angular_resolution_azimuth"             value="$(arg angular_resolution_azimuth)"/>
+        <param name="point_step"                             value="$(arg point_step)"/>
+    </node>
+    
+    <arg name="pi"   value="3.141592654"/>
+    
+    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
+        <remap from="cloud_in"            to="/lidar_radar_fusion_node/final_result_cloud"/>
+        <remap from="scan"                to="/lidar_radar_fusion_node/result_laser_scan"/>
+        <param name="min_height"          value="-1.0"/>
+        <param name="max_height"          value="1.0"/>
+        <param name="angle_min"           value="$(eval -1*arg('pi'))"/>
+        <param name="angle_max"           value="$(eval arg('pi'))"/>
+        <!-- <param name="angle_increment"     value="$(arg"/> -->
+        <param name="queue_size"          value="1"/>
+        <param name="scan_time"           value="0.1"/>
+        <param name="range_min"           value="0.5"/>
+        <param name="range_max"           value="120"/>
+        <param name="target_frame"        value="os1_lidar"/>
+        <param name="transform_tolerance" value="0.5"/>
+    </node>
+
+</launch>

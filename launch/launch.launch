@@ -1,0 +1,16 @@
+<launch>
+    <!-- Bag file args -->
+    <arg name="bag_file" default="$(env HOME)/2020-11-11-13-14-47_mapping_corcho2.bag"/>
+    <arg name="rate" default="0.5"/>
+    <arg name="image" default="image_flipped"/>
+    <arg name="start" default="0"/>
+
+    <!-- Uncompress Camera Images -->
+    <node pkg="image_transport" type="republish" name="front_repub" args="raw in:=$(arg image) raw out:=/$(arg image)"/>
+
+    <!-- BAG Player -->
+    <!-- Without the own tf of the bag -->
+    <arg name="start" default="15.0"/>
+    <node pkg="rosbag" type="play" name="play" args="$(arg bag_file) -s $(arg start) --clock -r $(arg rate)" />
+
+</launch>
