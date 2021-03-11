@@ -139,7 +139,7 @@
     <arg name="camera_1"           default="usb_cam_front"/>
     <arg name="image"           default="image_flipped"/>
     <arg name="fiducial_len"    default="0.18"/>
-    <arg name="ignore_fiducials" default=""/>
+    <arg name="ignore_fiducials" default="1-399,422,501-1023"/>
     <arg name="dictionary" default="16"/>
     <arg name="fiducial_len_override" default=""/>
     <arg name="do_pose_estimation" default="true"/>
