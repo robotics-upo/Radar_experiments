@@ -14,8 +14,8 @@
     <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name)"/>
     
     <node name="bag_player" type="play" pkg="rosbag" 
-          args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) -q -l" 
-          output="screen" if="$(arg play_bag)"/>
+          args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) -q -d 4" 
+          output="screen" if="$(arg play_bag)" required="true"/>
 
      <!-- MCL2D initial position -->
   <!--  <arg name="initial_pose_x"  default="8.3"/>
@@ -234,7 +234,11 @@
         <remap from="/fiducial_images" to="$(arg camera_1)/fiducial_images"/>
     </node>
 
-    <node name="gt_saver" pkg="radar_experiments" type="calculate_ground_truth.py" output="screen"/>
+    <arg name="gt_filename" default="stats_gt_saver.txt"/>
+    <node name="gt_saver" pkg="radar_experiments" type="calculate_ground_truth.py" output="screen">
+        <remap from="pose" to="/fiducial_pose"/>
+        <param name="filename" value="$(find radar_experiments)/stats/$(arg gt_filename)"/>
+    </node>
 
     <include file="$(find fiducial_slam)/launch/fiducial_slam.launch">
         <arg name="map_file" value="$(find radar_experiments)/maps/map_gt.txt"/>
