@@ -3,7 +3,7 @@
 import rospy
 from tf2_geometry_msgs import PoseStamped
 from tf_conversions import transformations
-from numpy import pi, sin, cos, sqrt
+from numpy import pi, sin, cos, sqrt, pi, floor
 from geometry_msgs.msg import TransformStamped, Quaternion, PoseWithCovarianceStamped
 from tf2_ros import Buffer, TransformListener
 import tf2_ros
@@ -45,7 +45,10 @@ class GroundTruth:
         q_fid = data.pose.pose.orientation
         (roll,pitch, yaw_fid) = transformations.euler_from_quaternion((q_fid.x, q_fid.y, q_fid.z, q_fid.w))
 
-        yaw_dist = abs(yaw_amcl-yaw_fid)
+        yaw_dist = yaw_amcl-yaw_fid
+        yaw_dist -= round(yaw_dist/pi)*pi
+        yaw_dist = abs(yaw_dist)
+        
         
         text = '{0} {1} {2} {3} {4} {5} {6} {7} {8}'.format(data.header.stamp, p_amcl.x, p_amcl.y, yaw_amcl,
                                                     p_fid.x, p_fid.y, yaw_fid, d1, yaw_dist)
