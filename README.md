@@ -30,7 +30,7 @@ You can downlaod the repository and execute ```./scripts/install_fusion_dependen
 To test the radar and lidar fusion node you will need a dataset. You can download it [here](https://www.dropbox.com/s/qr5nr5gbng1jflh/2020-12-01-13-21-03.bag?dl=0) a bag containing pointcloud and radar data from December experiments. Download into your home folder and launch the main launch as it follows:
 
 ```
-roslaunch radar_experiments localize_with_gt.launch gt_filename:=stats_radar_$CONTADOR.txt localize_method:=fusion
+roslaunch radar_experiments localize_with_gt.launch gt_filename:=stats_radar.txt localize_method:=fusion
 ```
 
 It will run the fusion node and launch a rviz visualization window where you can select which pointclouds you want to visualize.
