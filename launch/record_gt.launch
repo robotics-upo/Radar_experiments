@@ -1,0 +1,69 @@
+<launch>
+    <param name="use_sim_time" value="true"/>
+    <arg name="pi"   value="3.141592654"/>
+
+    <arg name="launch_static_tf"       default="true"/>
+    <arg name="play_bag"               default="true"/>
+    <arg name="sec"                    default="0"/>
+    <arg name="rate"                   default="1"/>
+    <!-- <arg name="bag_name"               default="2020-11-11-13-03-27_mapping_corcho1.bag"/> -->
+    <!-- <arg name="bag_name"               default="2020-12-01-12-04-38_nocams_front_cam_noodomtf.bag"/> -->
+    <arg name="bag_name"               default="2020-12-01-11-36-21_front_cam_nodomtf2.bag"/>
+    <!-- <arg name="bag_name"               default="2020-12-01-10-45-22_front_cam_odomtf.bag   "/> -->
+    <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name)"/>
+    
+    <node name="bag_player" type="play" pkg="rosbag" 
+          args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) -q -d 4" 
+          output="screen" if="$(arg play_bag)" required="true"/>
+   
+
+    <!-- Odometry stuff -->
+    <arg name="use_imu" default="false"/>
+    <!-- Odometry ticks pure. This node susbcribes to /idmind_motors/wheel_odom and publishes /odom topic and tf from odom to base link without reading imu -->
+    <node pkg="idmind_navigation" type="odometry_node.py" name="odometry_node_ticks" unless="$(arg use_imu)">
+        <param name="/bot/base_width" value="0.65"/>
+    </node>
+    <node pkg="radar_experiments" type="upo_odometry.py" name="odometry_node_imu" if="$(arg use_imu)">
+        <param name="use_imu" value="2"/>
+    </node>
+    
+    <arg name="pi/2" value="1.5707963267948966"/>
+
+
+    <include file="$(find radar_experiments)/launch/frames.launch" if="$(arg launch_static_tf)"/>
+    
+<!-- Ground truth stuff!! -->
+    <arg name="camera_1"           default="usb_cam_front"/>
+    <arg name="image"           default="image_flipped"/>
+    <arg name="fiducial_len"    default="0.18"/>
+    <arg name="ignore_fiducials" default="1-399,422,501-1023"/> <!-- in one bag, 422 is moved. So we discard it -->
+    <arg name="dictionary" default="16"/>
+    <arg name="fiducial_len_override" default=""/>
+    <arg name="do_pose_estimation" default="true"/>
+
+    <node pkg="aruco_detect" name="aruco_detect_$(arg camera_1)" type="aruco_detect" respawn="false">
+        <param name="image_transport" value="compressed"/>
+        <param name="publish_images" value="true" />
+        <param name="fiducial_len" value="$(arg fiducial_len)"/>
+        <param name="dictionary" value="$(arg dictionary)"/>
+        <param name="do_pose_estimation" value="$(arg do_pose_estimation)"/>
+        <param name="ignore_fiducials" value="$(arg ignore_fiducials)"/>
+        <param name="fiducial_len_override" value="$(arg fiducial_len_override)"/>
+        <remap from="/camera" to="$(arg camera_1)/$(arg image)"/>
+        <remap from="/camera/compressed" to="$(arg camera_1)/$(arg image)/compressed"/>
+        <remap from="/camera_info" to="$(arg camera_1)/camera_info"/>
+        <remap from="/fiducial_images" to="$(arg camera_1)/fiducial_images"/>
+    </node>
+
+    <arg name="gt_bag_file" default="gt"/>
+    <node name="record_gt" pkg="rosbag" type="record" args="/fiducial_pose -o $(arg gt_bag_file)"/>
+
+    <include file="$(find fiducial_slam)/launch/fiducial_slam.launch">
+        <arg name="map_file" value="$(find radar_experiments)/maps/map_gt.txt"/>
+        <arg name="read_only_map" value="true"/>
+        <arg name="publish_tf" value="true"/>
+    </include>
+
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find radar_experiments)/rviz/fuse_sensors.rviz"/>
+
+</launch>
