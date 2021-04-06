@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 2.8.3)
 project(radar_experiments)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
 set (CMAKE_CXX_STANDARD 14)
 
 ## Find catkin macros and libraries
@@ -23,7 +22,10 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
 )
 
+SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake_modules)
+
 find_package(PCL REQUIRED)
+find_package(G2O REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -157,6 +159,10 @@ add_dependencies(lidar_std_dev_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin
 add_executable(lidar_radar_fusion_node src/sensor_fusion/lidar_radar_fusion.cpp)
 target_link_libraries(lidar_radar_fusion_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 add_dependencies(lidar_radar_fusion_node ${PROJECT_NAME}_gencfg ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+add_executable(refine_gt src/refine_gt.cpp)
+target_link_libraries(refine_gt ${catkin_LIBRARIES} ${G2O_LIBRARIES})
+# add_dependencies(lidar_radar_fusion_node ${PROJECT_NAME}_gencfg ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 #############
 ## Install ##
 #############
