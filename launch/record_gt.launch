@@ -6,15 +6,17 @@
     <arg name="play_bag"               default="true"/>
     <arg name="sec"                    default="0"/>
     <arg name="rate"                   default="1"/>
-    <!-- <arg name="bag_name"               default="2020-11-11-13-03-27_mapping_corcho1.bag"/> -->
+    <arg name="bag_name"               default="2020-11-11-13-03-27_mapping_corcho1.bag"/>
     <!-- <arg name="bag_name"               default="2020-12-01-12-04-38_nocams_front_cam_noodomtf.bag"/> -->
     <!-- <arg name="bag_name"               default="2020-12-01-11-36-21_front_cam_nodomtf2.bag"/> -->
-    <arg name="bag_name"               default="2020-12-01-10-45-22_front_cam_odomtf.bag   "/>
+    <!-- <arg name="bag_name"               default="2020-12-01-10-45-22_front_cam_odomtf.bag   "/> -->
     <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name)"/>
     
     <node name="bag_player" type="play" pkg="rosbag" 
           args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) -q -d 4" 
-          output="screen" if="$(arg play_bag)" required="true"/>
+          output="screen" if="$(arg play_bag)" required="true">
+        <remap from="tf" to="tf_non"/>
+    </node>
    
 
     <!-- Odometry stuff -->
@@ -26,6 +28,8 @@
     <node pkg="radar_experiments" type="upo_odometry.py" name="odometry_node_imu" if="$(arg use_imu)">
         <param name="use_imu" value="2"/>
     </node>
+
+    
     
     <arg name="pi/2" value="1.5707963267948966"/>
 
@@ -41,6 +45,13 @@
     <arg name="fiducial_len_override" default=""/>
     <arg name="do_pose_estimation" default="true"/>
 
+    <node name="uncompresser" pkg="image_transport" type="republish" args="compressed in:=$(arg camera_1)/$(arg image) raw out:=$(arg camera_1)/$(arg image)"/>
+    
+    <!-- Rectify image !! Tested and works worse with rectified images!-->
+    <!-- <node name="rectifier" pkg="image_proc" type="image_proc" ns="$(arg camera_1)">
+        <remap from="image_mono" to="$(arg image)"/>
+    </node> -->
+
     <node pkg="aruco_detect" name="aruco_detect_$(arg camera_1)" type="aruco_detect" respawn="false">
         <param name="image_transport" value="compressed"/>
         <param name="publish_images" value="true" />
@@ -49,8 +60,9 @@
         <param name="do_pose_estimation" value="$(arg do_pose_estimation)"/>
         <param name="ignore_fiducials" value="$(arg ignore_fiducials)"/>
         <param name="fiducial_len_override" value="$(arg fiducial_len_override)"/>
-        <remap from="/camera" to="$(arg camera_1)/$(arg image)"/>
+        <remap from="/camera" to="$(arg camera_1)/image_rect"/>
         <remap from="/camera/compressed" to="$(arg camera_1)/$(arg image)/compressed"/>
+        <!-- <remap from="/camera/compressed" to="$(arg camera_1)/image_rect/compressed"/> -->
         <remap from="/camera_info" to="$(arg camera_1)/camera_info"/>
         <remap from="/fiducial_images" to="$(arg camera_1)/fiducial_images"/>
     </node>

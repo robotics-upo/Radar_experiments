@@ -36,8 +36,6 @@ typedef g2o::LinearSolverEigen<SlamBlockSolver::PoseMatrixType> SlamLinearSolver
 
 #include <ros/ros.h>
 
-// #include <smart_ptr/unique_ptr.hpp>
-
 using namespace std;
 using namespace g2o;
 
@@ -60,7 +58,7 @@ class GroundTruthRefiner {
 
     void groundTruthCallback(const geometry_msgs::PoseStamped::ConstPtr &pose);
 
-    void updateOdom(); // Whenever the base displaces over a threshold --> put an extra odometry measure
+    bool updateOdometry(); // Whenever the base displaces over a threshold --> put an extra odometry measure
 
     void optimize(int n_rounds);
 
@@ -79,6 +77,7 @@ class GroundTruthRefiner {
     std::unique_ptr<SlamLinearSolver> _linear_solver; 
     Eigen::Matrix3d _odometry_information, _observation_information;
     std::string _baseFrame, _odomFrame, _mapFrame;
+    double _ang_thres, _dist_thres;
 
     const int _position_id_offset = 1000000;
     std::string _g2o_file;
@@ -168,6 +167,10 @@ GroundTruthRefiner::GroundTruthRefiner():tfBuffer(ros::Duration(30.0)) {
     covariance(2, 2) = rot_noise*rot_noise;
     _observation_information = covariance.inverse();
 
+    // Thresholds for updating odometry
+    pnh.param<double>("dist_thres", _dist_thres, 0.1);
+    pnh.param<double>("ang_thres", _ang_thres, 0.1);
+
     // if (load(_g2o_file))
     //     ROS_INFO("Stats file %s loaded successfully", _g2o_file.c_str());
 
@@ -231,6 +234,49 @@ void GroundTruthRefiner::groundTruthCallback(const geometry_msgs::PoseStamped::C
     _optimizer.addEdge(observation);
     _frame_num++;
     _last_tf_odom_base = tf_odom_base;
+}
+
+bool GroundTruthRefiner::updateOdometry() {
+    if (_frame_num <= 1) 
+        return false; // The first vertex has to be a measure
+
+    tf2::Transform t_odom_base; // Before optimization --> get odom base
+    if (!lookupTransform(_odomFrame, _baseFrame, ros::Time(0), t_odom_base)) {
+        return false;
+    }
+
+    // Get the odometry step:
+    auto t_odom_step = _last_tf_odom_base.inverse() * t_odom_base;
+    auto d_ = t_odom_base.getOrigin().length();
+
+    double x,y,theta;
+    get_tf_coords(x,y, theta, t_odom_step);
+
+    if (d_ > _dist_thres || theta > _ang_thres) {
+        
+        ROS_INFO("Performing an Odometry Update");
+        auto pos = dynamic_cast<VertexSE2 *>(_optimizer.vertex(_frame_num))->estimate();
+
+        tf2::Transform t;
+        t.setOrigin(tf2::Vector3(pos[0],pos[1],0.0));
+        tf2::Quaternion q;
+        q.setRPY(0,0, pos[2]);
+
+        t = t * t_odom_step;
+        get_tf_coords(x,y, theta, t);
+        ROS_INFO("Adding odometry. Coords: (%f, %f, %f)", x, y, theta);
+        
+        const SE2 robot_pose(x, y, theta);
+        VertexSE2* robot = new VertexSE2;
+        robot->setId(_frame_num);
+        robot->setEstimate(robot_pose);
+        _optimizer.addVertex(robot);   
+        _frame_num++;    
+        _last_tf_odom_base = t_odom_base;
+
+        return true;
+    }
+    return false;
 }
 
 /*********************************************************************************
@@ -316,15 +362,15 @@ int main(int argc, char **argv) {
     while (ros::ok()) {
         ros::spinOnce();
         r.sleep();
-        // node->publishMarkers();
         cont ++;
 
-        // if (cont%100 == 0)
-        //     node->publishMarkers();
+        // Check whether we have advanced or not and add a constraint
+        node->updateOdometry();
 
         // Once the data has been collected --> optimize with g2o
         if (node != nullptr && cont % update_iters == 0) {
             node->optimize(n_iter);
+            publishPath();
         }
     }
    
