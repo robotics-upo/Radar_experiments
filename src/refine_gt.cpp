@@ -54,7 +54,7 @@ class GroundTruthRefiner {
 
     public:
     GroundTruthRefiner();
-    
+
 
     void groundTruthCallback(const geometry_msgs::PoseStamped::ConstPtr &pose);
 
@@ -71,10 +71,10 @@ class GroundTruthRefiner {
     std::unique_ptr<tf2_ros::TransformListener> listener;
 
     // G2O STUFF
-    
+
     // allocating the optimizer
     g2o::SparseOptimizer _optimizer;
-    std::unique_ptr<SlamLinearSolver> _linear_solver; 
+    std::unique_ptr<SlamLinearSolver> _linear_solver;
     Eigen::Matrix3d _odometry_information, _observation_information;
     std::string _baseFrame, _odomFrame, _mapFrame;
     double _ang_thres, _dist_thres;
@@ -84,7 +84,7 @@ class GroundTruthRefiner {
 
     int _frame_num = 0;
 
-    static void get_tf_coords(double &x, double &y, double &theta, const tf2::Transform &t); 
+    static void get_tf_coords(double &x, double &y, double &theta, const tf2::Transform &t);
     virtual bool lookupTransform(const std::string &from, const std::string &to, const ros::Time &time,
                          tf2::Transform &T) const;
 };
@@ -109,7 +109,7 @@ bool GroundTruthRefiner::lookupTransform(const std::string &from, const std::str
 
         tf2::fromMsg(transform.transform, T);
         tf2::Vector3 c = T.getOrigin();
-        
+
 
         return !isnan(c.x()) && !isnan(c.y()) && !isnan(c.z());
     } catch (tf2::TransformException &ex) {
@@ -155,7 +155,7 @@ GroundTruthRefiner::GroundTruthRefiner():tfBuffer(ros::Duration(30.0)) {
     Eigen::Matrix3d covariance;
     covariance.fill(0.);
     covariance(0, 0) = trans_noise_x*trans_noise_x;
-    covariance(1, 1) = trans_noise_y*trans_noise_y; 
+    covariance(1, 1) = trans_noise_y*trans_noise_y;
     covariance(2, 2) = rot_noise*rot_noise;
     _odometry_information = covariance.inverse();
 
@@ -163,7 +163,7 @@ GroundTruthRefiner::GroundTruthRefiner():tfBuffer(ros::Duration(30.0)) {
     pnh.param<double>("rot_noise_obs", rot_noise, 0.03);
     pnh.param<double>("trans_noise_obs", trans_noise_x, 0.1);
     covariance(0, 0) = trans_noise_x*trans_noise_x;
-    covariance(1, 1) = trans_noise_x*trans_noise_x; // NOTE: not a bug, same noise for x and y 
+    covariance(1, 1) = trans_noise_x*trans_noise_x; // NOTE: not a bug, same noise for x and y
     covariance(2, 2) = rot_noise*rot_noise;
     _observation_information = covariance.inverse();
 
@@ -197,8 +197,8 @@ void GroundTruthRefiner::groundTruthCallback(const geometry_msgs::PoseStamped::C
     double x = pose->pose.position.x;
     double y = pose->pose.position.y;
     ROS_INFO("Received pose. Coords: (%f, %f, %f)", x, y, theta);
-    
-    
+
+
     const SE2 robot_pose(x, y, theta);
     VertexSE2* robot = new VertexSE2;
     robot->setId(_frame_num);
@@ -220,7 +220,7 @@ void GroundTruthRefiner::groundTruthCallback(const geometry_msgs::PoseStamped::C
         get_tf_coords(x, y, theta, odom_tf);
         const SE2 odom_meas(x, y, theta);
         odometry->setMeasurement(odom_meas);
-        odometry->setInformation(_odometry_information); 
+        odometry->setInformation(_odometry_information);
         _optimizer.addEdge(odometry);
     }
 
@@ -237,7 +237,7 @@ void GroundTruthRefiner::groundTruthCallback(const geometry_msgs::PoseStamped::C
 }
 
 bool GroundTruthRefiner::updateOdometry() {
-    if (_frame_num <= 1) 
+    if (_frame_num <= 1)
         return false; // The first vertex has to be a measure
 
     tf2::Transform t_odom_base; // Before optimization --> get odom base
@@ -253,7 +253,7 @@ bool GroundTruthRefiner::updateOdometry() {
     get_tf_coords(x,y, theta, t_odom_step);
 
     if (d_ > _dist_thres || theta > _ang_thres) {
-        
+
         ROS_INFO("Performing an Odometry Update");
         auto pos = dynamic_cast<VertexSE2 *>(_optimizer.vertex(_frame_num))->estimate();
 
@@ -265,13 +265,13 @@ bool GroundTruthRefiner::updateOdometry() {
         t = t * t_odom_step;
         get_tf_coords(x,y, theta, t);
         ROS_INFO("Adding odometry. Coords: (%f, %f, %f)", x, y, theta);
-        
+
         const SE2 robot_pose(x, y, theta);
         VertexSE2* robot = new VertexSE2;
         robot->setId(_frame_num);
         robot->setEstimate(robot_pose);
-        _optimizer.addVertex(robot);   
-        _frame_num++;    
+        _optimizer.addVertex(robot);
+        _frame_num++;
         _last_tf_odom_base = t_odom_base;
 
         return true;
@@ -302,7 +302,7 @@ void GroundTruthRefiner::optimize(int n_rounds) {
   ROS_INFO("Done Optimizing.");
   int max_id = 0;
 
-  // Initialize path for visualization 
+  // Initialize path for visualization
   nav_msgs::Path p;
   static int path_seq = 0;
   p.header.frame_id = _mapFrame;
@@ -310,11 +310,11 @@ void GroundTruthRefiner::optimize(int n_rounds) {
   p.header.seq = path_seq++;
 
   for (auto &x:_optimizer.vertices()) {
-      
+
         auto y = dynamic_cast<VertexSE2 *> ( x.second);
         auto &pos = y->estimate();
         if (y == nullptr || y->id() == 0) continue;
-        
+
         max_id = std::max(max_id, x.first); // Get max ID
 
         geometry_msgs::PoseStamped curr_pose;
@@ -326,7 +326,7 @@ void GroundTruthRefiner::optimize(int n_rounds) {
         curr_pose.pose.position.y = pos[1];
         curr_pose.pose.position.z = 0.0;
         p.poses.push_back(curr_pose);
-      
+
   }
   auto y = dynamic_cast<VertexSE2 *>(_optimizer.vertices()[max_id]);
   auto pos = y->estimate();
@@ -337,22 +337,22 @@ void GroundTruthRefiner::optimize(int n_rounds) {
   if (_g2o_file.size() > 0) {
     _optimizer.save(_g2o_file.c_str());
   }
-  
+
 }
 
 int main(int argc, char **argv) {
     ros::init(argc, argv, "g2o_fiducial_slam");
-    
+
     sleep(2); // Let the systems initialize
     std::unique_ptr<GroundTruthRefiner> node;
     node.reset(new GroundTruthRefiner);
     double rate = 20.0;
     ros::Rate r(rate);
-    
+
     int update_secs = 100;
 
     ros::NodeHandle pnh("~");
-    
+
     int n_iter;
     pnh.param("n_iter", n_iter, 3);
     pnh.param("update_secs", update_secs, 10);
@@ -370,10 +370,9 @@ int main(int argc, char **argv) {
         // Once the data has been collected --> optimize with g2o
         if (node != nullptr && cont % update_iters == 0) {
             node->optimize(n_iter);
-            publishPath();
         }
     }
-   
+
     return 0;
 }
 
