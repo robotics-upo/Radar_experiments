@@ -160,6 +160,9 @@ add_executable(lidar_radar_fusion_node src/sensor_fusion/lidar_radar_fusion.cpp)
 target_link_libraries(lidar_radar_fusion_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 add_dependencies(lidar_radar_fusion_node ${PROJECT_NAME}_gencfg ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
+add_executable(save_lidar_radar src/generate_dataset/save_radar_lidar.cpp)
+target_link_libraries(save_lidar_radar ${catkin_LIBRARIES} )
+
 add_executable(refine_gt src/refine_gt.cpp)
 target_link_libraries(refine_gt ${catkin_LIBRARIES} ${G2O_LIBRARIES})
 # add_dependencies(lidar_radar_fusion_node ${PROJECT_NAME}_gencfg ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

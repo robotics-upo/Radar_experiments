@@ -21,7 +21,9 @@ git clone https://github.com/robotics-upo/cloud_concatenator              || ( e
 echo -e "${YELLOW}    ---- Clonning UPO Markers  ...${NC}"
 git clone https://github.com/robotics-upo/upo_markers                     || ( echo "Stashing your changes and pulling latest commit... "  && cd upo_markers && git stash && git pull && cd .. )
 echo -e "${YELLOW}    ---- Clonning Fiducials  ...${NC}"
-git clone https://github.com/robotics-upo/fiducials                     || ( echo "Stashing your changes and pulling latest commit... "  && cd upo_markers && git stash && git pull && cd .. )
+git clone https://github.com/robotics-upo/fiducials                     || ( echo "Stashing your changes and pulling latest commit... "  && cd fiducials && git stash && git pull && cd .. )
+echo -e "${YELLOW}    ---- Clonning Light Scan Sim  ...${NC}"
+git clone https://github.com/robotics-upo/light_scan_sim                     || ( echo "Stashing your changes and pulling latest commit... "  && cd light_scan_sim && git stash && git pull && cd .. )
 
 read -p "-- Installing dependencies of fiducials: Installing G2O. Proceed (y/N) (enter not if you have already installed G2O in your system)" -n 1 -r
 echo
@@ -34,7 +36,7 @@ echo -e "${YELLOW}-- Repositories cloned, compiling...${NC}"
 cd ..
 catkin_make
 
-echo -e "${YELLOW}-- Next step is to download bags from dropbox. You need at least 20 GB of disk space ...${NC}"
+echo -e "${YELLOW}-- The next step is to download bags from dropbox. You need at least 20 GB of disk space ...${NC}"
 path="radar_fusion_bags"
 
 read -p "Do you want to continue? (y/N)" -n 1 -r

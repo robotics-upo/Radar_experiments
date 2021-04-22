@@ -1,0 +1,136 @@
+<launch>
+    <param name="use_sim_time" value="true"/>
+    <arg name="pi"   value="3.141592654"/>
+    <arg name="pi/2" value="1.5707963267948966"/>
+
+    <arg name="launch_static_tf"       default="true"/>
+    <arg name="play_bag"               default="true"/>
+    <arg name="sec"                    default="0"/>
+    <arg name="rate"                   default="1"/>
+    <!-- <arg name="bag_name"               default="2020-11-11-13-03-27_mapping_corcho1.bag"/> -->
+    <!-- <arg name="bag_name"               default="2020-12-01-12-04-38_nocams_front_cam_noodomtf.bag"/> -->
+    <!-- <arg name="bag_name"               default="2020-12-01-11-36-21_front_cam_nodomtf2.bag"/> -->
+    <arg name="bag_name"               default="2020-12-01-10-45-22_front_cam_odomtf.bag   "/>
+    <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name)"/>
+    
+    <node name="bag_player" type="play" pkg="rosbag" 
+          args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) -q -d 4" 
+          output="screen" if="$(arg play_bag)" required="true">
+        <remap from="tf" to="tf_non"/>
+    </node>
+
+    <!-- Concatenate radars-->
+    <include file="$(find radar_experiments)/launch/concatenator.launch"/>
+
+    <!-- Odometry stuff -->
+    <arg name="use_imu" default="false"/>
+    <!-- Odometry ticks pure. This node susbcribes to /idmind_motors/wheel_odom and publishes /odom topic and tf from odom to base link without reading imu -->
+    <node pkg="idmind_navigation" type="odometry_node.py" name="odometry_node_ticks" unless="$(arg use_imu)">
+        <param name="/bot/base_width" value="0.65"/>
+    </node>
+    <node pkg="radar_experiments" type="upo_odometry.py" name="odometry_node_imu" if="$(arg use_imu)">
+        <param name="use_imu" value="2"/>
+    </node>
+
+    <!-- Map server -->
+    <arg name="map2d_name"     default="tunel2d_map4"/>
+    <node pkg="map_server" name="map_server" type="map_server" args="$(find radar_experiments)/maps/$(arg map2d_name).yaml"/>
+
+    <!--- PC to laser scan parameters -->
+    <arg name="max_height" default="0.2"/>
+    <arg name="min_height" default="-0.1"/>
+    <arg name="range_min" default="0.3"/>
+    <arg name="range_max" default="20.0"/>
+    <arg name="angle_min" default="-$(arg pi)"/>
+    <arg name="angle_max" default="$(arg pi)"/>
+    <arg name="angle_increment" default="0.01"/>
+    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan_lidar">
+        <remap from="cloud_in"            to="/os1_cloud_node/points_non_dense"/>
+        <remap from="scan"                to="/os1_cloud_node/scan"/>
+        <param name="min_height"          value="$(arg min_height)"/>
+        <param name="max_height"          value="$(arg max_height)"/>
+        <param name="angle_min"           value="$(arg angle_min)"/>
+        <param name="angle_max"           value="$(arg angle_max)"/>
+        <param name="angle_increment"     value="$(arg angle_increment)"/>
+        <param name="queue_size"          value="1"/>
+        <param name="scan_time"           value="0.1"/>
+        <param name="range_min"           value="$(arg range_min)"/>
+        <param name="range_max"           value="$(arg range_max)"/>
+        <param name="target_frame"        value="os1_lidar"/>
+        <param name="transform_tolerance" value="0.5"/>
+    </node>
+    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan_radar">
+        <remap from="cloud_in"            to="/radarConcatenatedCloud"/>
+        <remap from="scan"                to="/radar_scan"/>
+        <param name="min_height"          value="$(arg min_height)"/>
+        <param name="max_height"          value="$(arg max_height)"/>
+        <param name="angle_min"           value="$(arg angle_min)"/>
+        <param name="angle_max"           value="$(arg angle_max)"/>
+        <param name="angle_increment"     value="$(arg angle_increment)"/>
+        <param name="queue_size"          value="1"/>
+        <param name="scan_time"           value="0.1"/>
+        <param name="range_min"           value="$(arg range_min)"/>
+        <param name="range_max"           value="$(arg range_max)"/>
+        <param name="target_frame"        value="os1_lidar"/>
+        <param name="transform_tolerance" value="0.5"/>
+    </node>
+
+    <!-- Emulated scan based on the map -->
+    <node name="light_scan_sim" pkg="light_scan_sim" type="light_scan_sim_node">
+        <!-- <rosparam file="$(find light_scan_sim)/config/config.yaml" command="load" /> -->
+        <param name="range/min" value="$(arg range_min)"/>
+        <param name="range/max" value="$(arg range_max)"/>
+        <param name="angle/min" value="$(arg angle_min)"/>
+        <param name="angle/max" value="$(arg angle_max)"/>
+        <param name="angle/increment" value="$(arg angle_increment)"/>
+        <param name="laser/frame" value="os1_lidar"/>
+    </node>
+
+
+    <include file="$(find radar_experiments)/launch/frames.launch" if="$(arg launch_static_tf)"/>
+    
+    <!-- Emulating laser stuff!! -->
+    <arg name="camera_1"           default="usb_cam_front"/>
+    <arg name="image"           default="image_flipped"/>
+    <arg name="fiducial_len"    default="0.18"/>
+    <arg name="ignore_fiducials" default="1-399,501-1023"/> <!-- 422 is moved in bag 2020-12-01-12-04-38. So we discard it only in this bag-->
+    <arg name="dictionary" default="16"/>
+    <arg name="fiducial_len_override" default=""/>
+    <arg name="do_pose_estimation" default="true"/>
+
+    <node name="uncompresser" pkg="image_transport" type="republish" args="compressed in:=$(arg camera_1)/$(arg image) raw out:=$(arg camera_1)/$(arg image)"/>
+    
+    <!-- Rectify image !! Tested and works worse with rectified images!-->
+    <!-- <node name="rectifier" pkg="image_proc" type="image_proc" ns="$(arg camera_1)">
+        <remap from="image_mono" to="$(arg image)"/>
+    </node> -->
+
+    <node pkg="aruco_detect" name="aruco_detect_$(arg camera_1)" type="aruco_detect" respawn="false">
+        <param name="image_transport" value="compressed"/>
+        <param name="publish_images" value="true" />
+        <param name="fiducial_len" value="$(arg fiducial_len)"/>
+        <param name="dictionary" value="$(arg dictionary)"/>
+        <param name="do_pose_estimation" value="$(arg do_pose_estimation)"/>
+        <param name="ignore_fiducials" value="$(arg ignore_fiducials)"/>
+        <param name="fiducial_len_override" value="$(arg fiducial_len_override)"/>
+        <remap from="/camera" to="$(arg camera_1)/image_rect"/>
+        <remap from="/camera/compressed" to="$(arg camera_1)/$(arg image)/compressed"/>
+        <!-- <remap from="/camera/compressed" to="$(arg camera_1)/image_rect/compressed"/> -->
+        <remap from="/camera_info" to="$(arg camera_1)/camera_info"/>
+        <remap from="/fiducial_images" to="$(arg camera_1)/fiducial_images"/>
+    </node>
+
+    <include file="$(find fiducial_slam)/launch/fiducial_slam.launch">
+        <arg name="map_file" value="$(find radar_experiments)/maps/map_gt.txt"/>
+        <arg name="read_only_map" value="true"/>
+        <arg name="publish_tf" value="true"/>
+    </include>
+
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find radar_experiments)/rviz/generate_dataset.rviz"/>
+
+    <node name="saver" pkg="radar_experiments" type="save_lidar_radar" output="screen" >
+        <remap from="/lidar_scan" to="os1_cloud_node/scan"/>
+        <remap from="/ground_truth_scan" to="/scan"/>
+    </node>
+
+</launch>
