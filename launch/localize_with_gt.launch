@@ -20,38 +20,49 @@
     <arg name="localization_method" default="fusion"/>
     
     <!-- Fusion -->
-    <arg name="scan_topic" default="/lidar_radar_fusion_node/result_laser_scan" if="$(eval arg('localization_method')=='fusion')"/>
-    <include file="$(dirname)/fuse_radar_lidar.launch" if="$(eval localization_method=='fusion')"/>  
+    <!-- <arg name="scan_topic" default="/lidar_radar_fusion_node/result_laser_scan" if="$(eval arg('localization_method')=='fusion')"/>
+    <include file="$(dirname)/fuse_radar_lidar.launch" if="$(eval localization_method=='fusion')"/>   -->
+
+    <arg name="scan_topic" default="/gm_fuser/fused_scan" if="$(eval arg('localization_method')=='fusion')"/>
+
+    <node name="gm_fuser" pkg="radar_experiments" type="lidar_radar_fusion_gm" output="screen" >
+        <!-- <remap from="/lidar_scan" to="os1_cloud_node/scan"/> -->
+        <param name="yaw_tolerance" value="0.13"/>
+    </node>
 
     <!-- Radar -->
     <include file="$(dirname)/concatenator.launch"/> 
     <arg name="scan_topic" default="/radar_scan" if="$(eval localization_method=='radar')"/>
-    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan_radar" if="$(eval localization_method=='radar')">
+    
+    <arg name="max_height" default="0.2"/>
+    <arg name="min_height" default="-0.1"/>
+    <arg name="angle_increment" default="0.01"/>
+    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan_radar">
         <remap from="cloud_in"            to="/radarConcatenatedCloud"/>
         <remap from="scan"                to="/radar_scan"/>
-        <param name="min_height"          value="-0.2"/>
-        <param name="max_height"          value="0.4"/>
+        <param name="min_height"          value="$(arg min_height)"/>
+        <param name="max_height"          value="$(arg max_height)"/>
         <param name="angle_min"           value="$(eval -1*arg('pi'))"/>
         <param name="angle_max"           value="$(eval arg('pi'))"/>
-        <!-- <param name="angle_increment"     value="$(arg"/> -->
+        <param name="angle_increment"     value="$(arg angle_increment)"/>
         <param name="queue_size"          value="1"/>
         <param name="scan_time"           value="0.1"/>
         <param name="range_min"           value="0.5"/>
         <param name="range_max"           value="120"/>
-        <param name="target_frame"        value="ti_mmwave_front_radar"/>
+        <param name="target_frame"        value="os1_lidar"/>
         <param name="transform_tolerance" value="0.5"/>
     </node>
 
     <!-- Lidar -->
     <arg name="scan_topic" default="/lidar_scan" if="$(eval localization_method=='lidar')"/>
-    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan_radar" if="$(eval localization_method=='lidar')">
+    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan_lidar" >
         <remap from="cloud_in"            to="/os1_cloud_node/points_non_dense"/>
         <remap from="scan"                to="/lidar_scan"/>
-        <param name="min_height"          value="-0.2"/>
-        <param name="max_height"          value="0.4"/>
+        <param name="min_height"          value="$(arg min_height)"/>
+        <param name="max_height"          value="$(arg max_height)"/>
         <param name="angle_min"           value="$(eval -1*arg('pi'))"/>
         <param name="angle_max"           value="$(eval arg('pi'))"/>
-        <!-- <param name="angle_increment"     value="$(arg"/> -->
+        <param name="angle_increment"     value="$(arg angle_increment)"/>
         <param name="queue_size"          value="1"/>
         <param name="scan_time"           value="0.1"/>
         <param name="range_min"           value="0.5"/>
@@ -78,7 +89,7 @@
     <node pkg="map_server" name="map_server" type="map_server" args="$(find radar_experiments)/maps/$(arg map2d_name).yaml"/>
     <!-- MCL2D initial position -->
     <arg name="initial_pose_x"  default="6.3"/>
-    <arg name="initial_pose_y"  default="3.9"/>
+    <arg name="initial_pose_y"  default="4.6"/>
     <arg name="initial_pose_a"  default="1.56"/>
     <node pkg="amcl" type="amcl" name="amcl">
     <!-- Publish scans from best pose at a max of 10 Hz -->
@@ -108,7 +119,6 @@
       <param name="laser_z_max"               value="0.05"/>
       <param name="laser_z_rand"              value="0.8"/>
       <param name="laser_sigma_hit"           value="0.2"/>
-      <param name="laser_lambda_short"        value="0.1"/>
       <param name="laser_lambda_short"        value="0.1"/>
       <param name="laser_model_type"          value="likelihood_field"/>
       <!-- <param name="laser_model_type" value="beam"/> -->
