@@ -4,7 +4,7 @@
 
     <arg name="launch_static_tf"       default="true"/>
     <arg name="play_bag"               default="true"/>
-    <arg name="sec"                    default="0"/>
+    <arg name="sec"                    default="10"/>
     <arg name="rate"                   default="1"/>
     <!-- <arg name="bag_name"               default="2020-11-11-13-03-27_mapping_corcho1.bag"/> -->
     <arg name="bag_name"               default="2020-12-01-12-04-38_nocams_front_cam_noodomtf.bag"/>
@@ -14,7 +14,9 @@
     
     <node name="bag_player" type="play" pkg="rosbag" 
           args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) -q -d 4" 
-          output="screen" if="$(arg play_bag)" required="true"/>
+          output="screen" if="$(arg play_bag)" required="true">
+        <remap from="tf" to="tf_useless"/>
+    </node>
 
     <!-- Depending on the localization method, start fusion or just remap scans-->
     <arg name="localization_method" default="fusion"/>
@@ -92,8 +94,9 @@
     <arg name="initial_pose_y"  default="4.6"/>
     <arg name="initial_pose_a"  default="1.56"/>
 
+    <arg name="use_dll" default="true"/>
 
-     <node name="dll2d_node" type="dll2d_node" pkg="dll2d" output="screen">
+     <node name="dll2d_node" type="dll2d_node" pkg="dll2d" output="screen" if ="$(arg use_dll)">
     <remap from="/dll2d_node/initial_pose" to="/initialpose"/>
     
     <param name="in_scan" value="$(arg scan_topic)" />
@@ -101,8 +104,8 @@
     <param name="odom_frame_id" value="/odom" />
     <param name="map_frame_id" value="/map" />
     <param name="update_rate" value="20.0" /> 
-    <param name="update_min_d" value="0.2" />
-    <param name="update_min_a" value="0.1" />
+    <param name="update_min_d" value="0.05" />
+    <param name="update_min_a" value="0.01" />
     <param name="update_min_t" value="1.0" />
     <param name="initial_x"            value="$(arg initial_pose_x)"/>
       <param name="initial_y"            value="$(arg initial_pose_y)"/>
@@ -112,7 +115,7 @@
     
   </node>
 
-    <!-- <node pkg="amcl" type="amcl" name="amcl">
+    <node pkg="amcl" type="amcl" name="amcl" unless="$(arg use_dll)">
       <remap from="scan"                      to="$(arg scan_topic)"/>
       <param name="initial_pose_x"            value="$(arg initial_pose_x)"/>
       <param name="initial_pose_y"            value="$(arg initial_pose_y)"/>
@@ -130,7 +133,6 @@
       <param name="kld_z"                     value="0.99"/>
       <param name="odom_alpha1"               value="0.7"/>
       <param name="odom_alpha2"               value="0.7"/>
-      <! - - translation std dev, m - ->
       <param name="odom_alpha3"               value="0.6"/>
       <param name="odom_alpha4"               value="0.6"/>
       <param name="odom_alpha5"               value="0.1"/>
@@ -149,7 +151,7 @@
       <param name="transform_tolerance"       value="0.1"/>
       <param name="recovery_alpha_slow"       value="0.0"/>
       <param name="recovery_alpha_fast"       value="0.0"/>
-    </node> -->
+    </node>
 
     <node pkg="upo_markers" type="marker_node" name="raposa_marker">
         <remap from="/raposa/marker"    to="/raposa_marker"/>

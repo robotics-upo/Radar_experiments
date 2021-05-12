@@ -62,6 +62,18 @@ Visualization Manager:
         All Enabled: true
         base_link:
           Value: true
+        fiducial_402:
+          Value: true
+        fiducial_404:
+          Value: true
+        fiducial_406:
+          Value: true
+        fiducial_407:
+          Value: true
+        fiducial_410:
+          Value: true
+        fiducial_411:
+          Value: true
         fiducial_412:
           Value: true
         fiducial_415:
@@ -69,6 +81,10 @@ Visualization Manager:
         fiducial_416:
           Value: true
         fiducial_420:
+          Value: true
+        fiducial_421:
+          Value: true
+        fiducial_423:
           Value: true
         fiducial_424:
           Value: true
@@ -116,17 +132,37 @@ Visualization Manager:
           Value: true
         fiducial_455:
           Value: true
+        fiducial_457:
+          Value: true
+        fiducial_460:
+          Value: true
         fiducial_461:
           Value: true
         fiducial_462:
           Value: true
+        fiducial_465:
+          Value: true
+        fiducial_466:
+          Value: true
         fiducial_469:
+          Value: true
+        fiducial_479:
+          Value: true
+        fiducial_481:
           Value: true
         fiducial_485:
           Value: true
         fiducial_486:
           Value: true
         fiducial_490:
+          Value: true
+        fiducial_492:
+          Value: true
+        fiducial_493:
+          Value: true
+        fiducial_494:
+          Value: true
+        fiducial_495:
           Value: true
         fiducial_497:
           Value: true
@@ -178,6 +214,18 @@ Visualization Manager:
               os1_sensor:
                 front_cam_link:
                   usb_cam_front:
+                    fiducial_402:
+                      {}
+                    fiducial_404:
+                      {}
+                    fiducial_406:
+                      {}
+                    fiducial_407:
+                      {}
+                    fiducial_410:
+                      {}
+                    fiducial_411:
+                      {}
                     fiducial_412:
                       {}
                     fiducial_415:
@@ -185,6 +233,10 @@ Visualization Manager:
                     fiducial_416:
                       {}
                     fiducial_420:
+                      {}
+                    fiducial_421:
+                      {}
+                    fiducial_423:
                       {}
                     fiducial_424:
                       {}
@@ -232,17 +284,37 @@ Visualization Manager:
                       {}
                     fiducial_455:
                       {}
+                    fiducial_457:
+                      {}
+                    fiducial_460:
+                      {}
                     fiducial_461:
                       {}
                     fiducial_462:
                       {}
+                    fiducial_465:
+                      {}
+                    fiducial_466:
+                      {}
                     fiducial_469:
+                      {}
+                    fiducial_479:
+                      {}
+                    fiducial_481:
                       {}
                     fiducial_485:
                       {}
                     fiducial_486:
                       {}
                     fiducial_490:
+                      {}
+                    fiducial_492:
+                      {}
+                    fiducial_493:
+                      {}
+                    fiducial_494:
+                      {}
+                    fiducial_495:
                       {}
                     fiducial_497:
                       {}
@@ -782,11 +854,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 65.53401947021484
+      Scale: 101.35920715332031
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
-      X: 7.550486087799072
-      Y: 12.04648208618164
+      X: 8.661137580871582
+      Y: 10.119645118713379
     Saved: ~
 Window Geometry:
   Displays:
