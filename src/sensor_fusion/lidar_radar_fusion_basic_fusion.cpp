@@ -201,7 +201,7 @@ private:
         }
     
         
-        std::cout <<" Radar scan points: " << n_radar
+            std::cout <<" Radar scan points: " << n_radar
                   <<" Lidar scan points: " << lidar_scan.ranges.size()  
                   <<" Fused scan points: " << fused_cont << std::endl;
 

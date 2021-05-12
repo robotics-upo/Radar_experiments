@@ -3,7 +3,7 @@
 import rospy
 from tf2_geometry_msgs import PoseStamped
 from tf_conversions import transformations
-from numpy import pi, sin, cos, sqrt, pi, floor
+from numpy import pi, sin, cos, sqrt, pi, floor, zeros
 from geometry_msgs.msg import TransformStamped, Quaternion, PoseWithCovarianceStamped
 from tf2_ros import Buffer, TransformListener
 import tf2_ros
@@ -16,9 +16,12 @@ class GroundTruth:
         self.tf_buffer = Buffer()
         self.transform_listener = TransformListener(self.tf_buffer)
         self.pose_sub = rospy.Subscriber("pose", PoseWithCovarianceStamped, callback=self.poseCb)
+        self.amcl_pose_sub = rospy.Subscriber("amcl_pose", PoseWithCovarianceStamped, callback=self.poseAmclCb)
         self.filename = rospy.get_param("~filename", default="ground_truth_stats.txt")
         self.base_frame = rospy.get_param("~base_frame", default="base_link")
         self.map_frame = rospy.get_param("~map_frame", default="map")
+
+        self.covariance = zeros(36)
         try:
             self.stats_file = open(self.filename, 'w')
         except OSError as err:
@@ -49,12 +52,14 @@ class GroundTruth:
         yaw_dist -= round(yaw_dist/pi)*pi
         yaw_dist = abs(yaw_dist)
         
-        
-        text = '{0} {1} {2} {3} {4} {5} {6} {7} {8}'.format(data.header.stamp, p_amcl.x, p_amcl.y, yaw_amcl,
-                                                    p_fid.x, p_fid.y, yaw_fid, d1, yaw_dist)
+        text = '{0} {1} {2} {3} {4} {5} {6} {7} {8} {9} {10} {11}'.format(data.header.stamp, p_amcl.x, p_amcl.y, yaw_amcl,
+                                                    p_fid.x, p_fid.y, yaw_fid, d1, yaw_dist, self.covariance[0], self.covariance[7], self.covariance[35])
         print text
         self.stats_file.write(text)
         self.stats_file.write('\n')
+
+    def poseAmclCb(self, data):
+        self.covariance = data.pose.covariance
         
 
 
