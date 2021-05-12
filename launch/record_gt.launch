@@ -6,8 +6,8 @@
     <arg name="play_bag"               default="true"/>
     <arg name="sec"                    default="0"/>
     <arg name="rate"                   default="1"/>
-    <arg name="bag_name"               default="2020-11-11-13-03-27_mapping_corcho1.bag"/>
-    <!-- <arg name="bag_name"               default="2020-12-01-12-04-38_nocams_front_cam_noodomtf.bag"/> -->
+    <!-- <arg name="bag_name"               default="2020-11-11-13-03-27_mapping_corcho1.bag"/> -->
+    <arg name="bag_name"               default="2020-12-01-12-04-38_nocams_front_cam_noodomtf.bag"/>
     <!-- <arg name="bag_name"               default="2020-12-01-11-36-21_front_cam_nodomtf2.bag"/> -->
     <!-- <arg name="bag_name"               default="2020-12-01-10-45-22_front_cam_odomtf.bag   "/> -->
     <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name)"/>
@@ -40,7 +40,7 @@
     <arg name="camera_1"           default="usb_cam_front"/>
     <arg name="image"           default="image_flipped"/>
     <arg name="fiducial_len"    default="0.18"/>
-    <arg name="ignore_fiducials" default="1-399,501-1023"/> <!-- in one bag, 422 is moved in bag at 12:00 pm. So we discard it only in this bag-->
+    <arg name="ignore_fiducials" default="1-399,422,501-1023"/> <!-- in one bag, 422 is moved in bag at 12:00 pm. So we discard it only in this bag-->
     <arg name="dictionary" default="16"/>
     <arg name="fiducial_len_override" default=""/>
     <arg name="do_pose_estimation" default="true"/>
@@ -71,7 +71,7 @@
     <node name="record_gt" pkg="rosbag" type="record" args="/fiducial_pose -o $(arg gt_bag_file)"/>
 
     <include file="$(find fiducial_slam)/launch/fiducial_slam.launch">
-        <arg name="map_file" value="$(find radar_experiments)/maps/map_gt.txt"/>
+        <arg name="map_file" value="$(find radar_experiments)/maps/map_aruco_sotano_v1.txt"/>
         <arg name="read_only_map" value="true"/>
         <arg name="publish_tf" value="true"/>
     </include>

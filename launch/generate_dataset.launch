@@ -121,7 +121,7 @@
     </node>
 
     <include file="$(find fiducial_slam)/launch/fiducial_slam.launch">
-        <arg name="map_file" value="$(find radar_experiments)/maps/map_gt.txt"/>
+        <arg name="map_file" value="$(find radar_experiments)/maps/map_aruco_sotano_v1.txt"/>
         <arg name="read_only_map" value="true"/>
         <arg name="publish_tf" value="true"/>
     </include>
