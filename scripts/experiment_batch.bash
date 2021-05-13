@@ -3,8 +3,8 @@ CONTADOR=$1
 until [ $CONTADOR -gt $2 ]; do
   # Roslaunch with multiple parameters
   echo Launch experiment $CONTADOR
-  # roslaunch radar_experiments localize_with_gt.launch gt_filename:=stats_fusion_$CONTADOR.txt localize_method:=fusion
-  # roslaunch radar_experiments localize_with_gt.launch gt_filename:=stats_radar_dll_$CONTADOR.txt localize_method:=radar
-  roslaunch radar_experiments localize_with_gt.launch gt_filename:=stats_lidar_$CONTADOR.txt localize_method:=lidar
+  roslaunch radar_experiments localize_with_gt.launch gt_filename:=stats_fusion_11_$CONTADOR.txt localize_method:=fusion bag_name:=2020-12-01-11-36-21_odom_gt.bag
+  roslaunch radar_experiments localize_with_gt.launch gt_filename:=stats_radar_11_$CONTADOR.txt localize_method:=radar scan_topic:=radar_scan bag_name:=2020-12-01-11-36-21_odom_gt.bag
+  roslaunch radar_experiments localize_with_gt.launch gt_filename:=stats_lidar_11_$CONTADOR.txt localize_method:=lidar scan_topic:=lidar_scan bag_name:=2020-12-01-11-36-21_odom_gt.bag
   let CONTADOR+=1
 done

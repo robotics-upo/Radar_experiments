@@ -7,9 +7,9 @@
     <arg name="sec"                    default="0"/>
     <arg name="rate"                   default="1"/>
     <!-- <arg name="bag_name"               default="2020-11-11-13-03-27_mapping_corcho1.bag"/> -->
-    <arg name="bag_name"               default="2020-12-01-12-04-38_nocams_front_cam_noodomtf.bag"/>
+    <!-- <arg name="bag_name"               default="2020-12-01-12-04-38_nocams_front_cam_noodomtf.bag"/> -->
     <!-- <arg name="bag_name"               default="2020-12-01-11-36-21_front_cam_nodomtf2.bag"/> -->
-    <!-- <arg name="bag_name"               default="2020-12-01-10-45-22_front_cam_odomtf.bag   "/> -->
+    <arg name="bag_name"               default="2020-12-01-10-45-22_front_cam_odomtf.bag   "/>
     <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name)"/>
     
     <node name="bag_player" type="play" pkg="rosbag" 

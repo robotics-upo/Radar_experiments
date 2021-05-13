@@ -4,6 +4,7 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /Image1
         - /PoseWithCovariance1
         - /Marker1
         - /LaserScan1
@@ -62,110 +63,6 @@ Visualization Manager:
         All Enabled: true
         base_link:
           Value: true
-        fiducial_402:
-          Value: true
-        fiducial_404:
-          Value: true
-        fiducial_406:
-          Value: true
-        fiducial_407:
-          Value: true
-        fiducial_410:
-          Value: true
-        fiducial_411:
-          Value: true
-        fiducial_412:
-          Value: true
-        fiducial_415:
-          Value: true
-        fiducial_416:
-          Value: true
-        fiducial_420:
-          Value: true
-        fiducial_421:
-          Value: true
-        fiducial_423:
-          Value: true
-        fiducial_424:
-          Value: true
-        fiducial_427:
-          Value: true
-        fiducial_428:
-          Value: true
-        fiducial_431:
-          Value: true
-        fiducial_432:
-          Value: true
-        fiducial_433:
-          Value: true
-        fiducial_434:
-          Value: true
-        fiducial_435:
-          Value: true
-        fiducial_436:
-          Value: true
-        fiducial_439:
-          Value: true
-        fiducial_441:
-          Value: true
-        fiducial_442:
-          Value: true
-        fiducial_443:
-          Value: true
-        fiducial_444:
-          Value: true
-        fiducial_445:
-          Value: true
-        fiducial_446:
-          Value: true
-        fiducial_447:
-          Value: true
-        fiducial_448:
-          Value: true
-        fiducial_449:
-          Value: true
-        fiducial_450:
-          Value: true
-        fiducial_451:
-          Value: true
-        fiducial_453:
-          Value: true
-        fiducial_455:
-          Value: true
-        fiducial_457:
-          Value: true
-        fiducial_460:
-          Value: true
-        fiducial_461:
-          Value: true
-        fiducial_462:
-          Value: true
-        fiducial_465:
-          Value: true
-        fiducial_466:
-          Value: true
-        fiducial_469:
-          Value: true
-        fiducial_479:
-          Value: true
-        fiducial_481:
-          Value: true
-        fiducial_485:
-          Value: true
-        fiducial_486:
-          Value: true
-        fiducial_490:
-          Value: true
-        fiducial_492:
-          Value: true
-        fiducial_493:
-          Value: true
-        fiducial_494:
-          Value: true
-        fiducial_495:
-          Value: true
-        fiducial_497:
-          Value: true
         front_cam_link:
           Value: true
         map:
@@ -214,110 +111,7 @@ Visualization Manager:
               os1_sensor:
                 front_cam_link:
                   usb_cam_front:
-                    fiducial_402:
-                      {}
-                    fiducial_404:
-                      {}
-                    fiducial_406:
-                      {}
-                    fiducial_407:
-                      {}
-                    fiducial_410:
-                      {}
-                    fiducial_411:
-                      {}
-                    fiducial_412:
-                      {}
-                    fiducial_415:
-                      {}
-                    fiducial_416:
-                      {}
-                    fiducial_420:
-                      {}
-                    fiducial_421:
-                      {}
-                    fiducial_423:
-                      {}
-                    fiducial_424:
-                      {}
-                    fiducial_427:
-                      {}
-                    fiducial_428:
-                      {}
-                    fiducial_431:
-                      {}
-                    fiducial_432:
-                      {}
-                    fiducial_433:
-                      {}
-                    fiducial_434:
-                      {}
-                    fiducial_435:
-                      {}
-                    fiducial_436:
-                      {}
-                    fiducial_439:
-                      {}
-                    fiducial_441:
-                      {}
-                    fiducial_442:
-                      {}
-                    fiducial_443:
-                      {}
-                    fiducial_444:
-                      {}
-                    fiducial_445:
-                      {}
-                    fiducial_446:
-                      {}
-                    fiducial_447:
-                      {}
-                    fiducial_448:
-                      {}
-                    fiducial_449:
-                      {}
-                    fiducial_450:
-                      {}
-                    fiducial_451:
-                      {}
-                    fiducial_453:
-                      {}
-                    fiducial_455:
-                      {}
-                    fiducial_457:
-                      {}
-                    fiducial_460:
-                      {}
-                    fiducial_461:
-                      {}
-                    fiducial_462:
-                      {}
-                    fiducial_465:
-                      {}
-                    fiducial_466:
-                      {}
-                    fiducial_469:
-                      {}
-                    fiducial_479:
-                      {}
-                    fiducial_481:
-                      {}
-                    fiducial_485:
-                      {}
-                    fiducial_486:
-                      {}
-                    fiducial_490:
-                      {}
-                    fiducial_492:
-                      {}
-                    fiducial_493:
-                      {}
-                    fiducial_494:
-                      {}
-                    fiducial_495:
-                      {}
-                    fiducial_497:
-                      {}
+                    {}
                 os1_imu:
                   {}
                 os1_lidar:
@@ -377,7 +171,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /usb_cam_front/fiducial_images
+      Image Topic: /usb_cam_front/image_flipped
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -722,9 +516,7 @@ Visualization Manager:
       Marker Topic: /fiducials
       Name: Marker
       Namespaces:
-        fiducial: true
-        sigma: true
-        text: true
+        {}
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -854,11 +646,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 101.35920715332031
+      Scale: 91.5731430053711
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
-      X: 8.661137580871582
-      Y: 10.119645118713379
+      X: 7.358577251434326
+      Y: 8.43196964263916
     Saved: ~
 Window Geometry:
   Displays:
