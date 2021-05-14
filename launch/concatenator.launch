@@ -13,8 +13,8 @@
         <remap from="cloud3"       to="$(arg cloud_3)"/>
         <remap from="cloud4"       to="$(arg cloud_4)"/>
         <remap from="full_cloud" to="$(arg radar_full_cloud_topic_name)"/>
-        <param name="frequency"    value="10"/>
-        <param name="target_frame" value="ti_mmwave_front_radar"/>
+        <param name="frequency"    value="1"/>
+        <param name="target_frame" value="odom"/>
     </node>
 
     <arg name="n_clouds" default="4"/>
