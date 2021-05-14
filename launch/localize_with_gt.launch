@@ -4,17 +4,19 @@
 
     <arg name="launch_static_tf"       default="true"/>
     <arg name="play_bag"               default="true"/>
-    <arg name="sec"                    default="0"/>
-    <arg name="rate"                   default="1"/>
+    <arg name="sec"                    default="10"/>
+    <arg name="rate"                   default="8"/>
     <!-- <arg name="bag_name"               default="2020-11-11-13-03-27_mapping_corcho1.bag"/> -->
-    <arg name="bag_name"               default="2020-12-01-12-04-38_nocams_front_cam_noodomtf.bag"/>
-    <!-- <arg name="bag_name"               default="2020-12-01-11-36-21_front_cam_nodomtf2.bag"/> -->
-    <!-- <arg name="bag_name"               default="2020-12-01-10-45-22_front_cam_odomtf.bag   "/> -->
+    <!-- <arg name="bag_name"               default="2020-12-01-12-04-38_odom_gt.bag"/> -->
+    <arg name="bag_name"               default="2020-12-01-11-36-21_odom_gt.bag"/>
+    <!-- <arg name="bag_name"               default="2020-12-01-10-45-22_gt.bag   "/> -->
     <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name)"/>
     
     <node name="bag_player" type="play" pkg="rosbag" 
-          args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) -q -d 4" 
-          output="screen" if="$(arg play_bag)" required="true"/>
+          args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) -q " 
+          output="screen" if="$(arg play_bag)" required="true">
+        <!-- <remap from="tf" to="tf_useless"/> -->
+    </node>
 
     <!-- Depending on the localization method, start fusion or just remap scans-->
     <arg name="localization_method" default="fusion"/>
@@ -74,12 +76,13 @@
    
 
     <!-- Odometry stuff -->
+    <arg name="calculate_odom" default="false"/>
     <arg name="use_imu" default="false"/>
     <!-- Odometry ticks pure. This node susbcribes to /idmind_motors/wheel_odom and publishes /odom topic and tf from odom to base link without reading imu -->
-    <node pkg="idmind_navigation" type="odometry_node.py" name="odometry_node_ticks" unless="$(arg use_imu)">
+    <node pkg="idmind_navigation" type="odometry_node.py" name="odometry_node_ticks" if="$(eval use_imu==False and calculate_odom == True )">
         <param name="/bot/base_width" value="0.65"/>
     </node>
-    <node pkg="radar_experiments" type="upo_odometry.py" name="odometry_node_imu" if="$(arg use_imu)">
+    <node pkg="radar_experiments" type="upo_odometry.py" name="odometry_node_imu" if="$(eval use_imu == True and calculate_odom == True)">
         <param name="use_imu" value="2"/>
     </node>
 
@@ -92,8 +95,9 @@
     <arg name="initial_pose_y"  default="4.6"/>
     <arg name="initial_pose_a"  default="1.56"/>
 
+    <arg name="use_dll" default="false"/>
 
-     <node name="dll2d_node" type="dll2d_node" pkg="dll2d" output="screen">
+     <node name="dll2d_node" type="dll2d_node" pkg="dll2d" output="screen" if ="$(arg use_dll)">
     <remap from="/dll2d_node/initial_pose" to="/initialpose"/>
     
     <param name="in_scan" value="$(arg scan_topic)" />
@@ -101,8 +105,8 @@
     <param name="odom_frame_id" value="/odom" />
     <param name="map_frame_id" value="/map" />
     <param name="update_rate" value="20.0" /> 
-    <param name="update_min_d" value="0.2" />
-    <param name="update_min_a" value="0.1" />
+    <param name="update_min_d" value="0.05" />
+    <param name="update_min_a" value="0.01" />
     <param name="update_min_t" value="1.0" />
     <param name="initial_x"            value="$(arg initial_pose_x)"/>
       <param name="initial_y"            value="$(arg initial_pose_y)"/>
@@ -112,7 +116,7 @@
     
   </node>
 
-    <!-- <node pkg="amcl" type="amcl" name="amcl">
+    <node pkg="amcl" type="amcl" name="amcl" unless="$(arg use_dll)">
       <remap from="scan"                      to="$(arg scan_topic)"/>
       <param name="initial_pose_x"            value="$(arg initial_pose_x)"/>
       <param name="initial_pose_y"            value="$(arg initial_pose_y)"/>
@@ -128,11 +132,10 @@
       <param name="max_particles"             value="5000"/>
       <param name="kld_err"                   value="0.05"/>
       <param name="kld_z"                     value="0.99"/>
-      <param name="odom_alpha1"               value="0.7"/>
-      <param name="odom_alpha2"               value="0.7"/>
-      <! - - translation std dev, m - ->
-      <param name="odom_alpha3"               value="0.6"/>
-      <param name="odom_alpha4"               value="0.6"/>
+      <param name="odom_alpha1"               value="0.6"/>
+      <param name="odom_alpha2"               value="0.6"/>
+      <param name="odom_alpha3"               value="0.5"/>
+      <param name="odom_alpha4"               value="0.5"/>
       <param name="odom_alpha5"               value="0.1"/>
       <param name="laser_z_hit"               value="0.5"/>
       <param name="laser_z_short"             value="0.05"/>
@@ -149,7 +152,7 @@
       <param name="transform_tolerance"       value="0.1"/>
       <param name="recovery_alpha_slow"       value="0.0"/>
       <param name="recovery_alpha_fast"       value="0.0"/>
-    </node> -->
+    </node>
 
     <node pkg="upo_markers" type="marker_node" name="raposa_marker">
         <remap from="/raposa/marker"    to="/raposa_marker"/>
@@ -172,8 +175,9 @@
     <arg name="dictionary" default="16"/>
     <arg name="fiducial_len_override" default=""/>
     <arg name="do_pose_estimation" default="true"/>
+    <arg name="calculate_ground_truth" default="false"/>
 
-    <node pkg="aruco_detect" name="aruco_detect_$(arg camera_1)" type="aruco_detect" respawn="false">
+    <node pkg="aruco_detect" name="aruco_detect_$(arg camera_1)" type="aruco_detect" respawn="false" if="$(arg calculate_ground_truth)">
         <param name="image_transport" value="compressed"/>
         <param name="publish_images" value="true" />
         <param name="fiducial_len" value="$(arg fiducial_len)"/>
@@ -193,8 +197,8 @@
         <param name="filename" value="$(find radar_experiments)/stats/$(arg gt_filename)"/>
     </node>
 
-    <include file="$(find fiducial_slam)/launch/fiducial_slam.launch">
-        <arg name="map_file" value="$(find radar_experiments)/maps/map_gt.txt"/>
+    <include file="$(find fiducial_slam)/launch/fiducial_slam.launch" if="$(arg calculate_ground_truth)">
+        <arg name="map_file" value="$(find radar_experiments)/maps/map_aruco_sotano_v1.txt"/>
         <arg name="read_only_map" value="true"/>
         <arg name="publish_tf" value="false"/>
     </include>

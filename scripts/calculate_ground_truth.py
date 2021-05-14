@@ -54,7 +54,7 @@ class GroundTruth:
         
         text = '{0} {1} {2} {3} {4} {5} {6} {7} {8} {9} {10} {11}'.format(data.header.stamp, p_amcl.x, p_amcl.y, yaw_amcl,
                                                     p_fid.x, p_fid.y, yaw_fid, d1, yaw_dist, self.covariance[0], self.covariance[7], self.covariance[35])
-        print text
+        print(text)
         self.stats_file.write(text)
         self.stats_file.write('\n')
 

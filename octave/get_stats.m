@@ -1,6 +1,6 @@
 function stats=get_stats(data)
-  max_time = 1e10
-  time_scale = 1e-10
+  max_time = 1e11
+  time_scale = 1e-9
   for i=1:length(data)
     max_time_ = floor(data{i}(length(data{i}(:,1)),1)*time_scale);
     max_time = min([max_time, max_time_])
