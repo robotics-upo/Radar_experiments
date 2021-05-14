@@ -63,7 +63,7 @@ IF(UNIX)
     PATHS /usr/local /usr ${CMAKE_PREFIX_PATH}
     PATH_SUFFIXES lib)
 
-  SET(G2O_LIBRARIES ${G2O_CSPARSE_EXTENSION_LIB}
+  SET(G2O_LIBRARIES #${G2O_CSPARSE_EXTENSION_LIB}
                     ${G2O_CORE_LIB}           
                     ${G2O_STUFF_LIB}          
                     ${G2O_TYPES_SLAM2D_LIB}   
