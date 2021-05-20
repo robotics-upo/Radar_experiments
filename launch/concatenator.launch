@@ -7,14 +7,17 @@
     <arg name="cloud_3" default="/ti_mmwave_right_radar/radar_scan_pcl"/>
     <arg name="cloud_4" default="/ti_mmwave_rear_radar/radar_scan_pcl"/>
 
+    <arg name="rate" default="1"/>
+    <arg name="target_frame" default="odom"/>
+
     <node name="async_cloud_concatenator" pkg="cloud_concatenator" type="async_concatenator_node" if="$(arg use_async_concatenator)">
         <remap from="cloud1"       to="$(arg cloud_1)"/>
         <remap from="cloud2"       to="$(arg cloud_2)"/>
         <remap from="cloud3"       to="$(arg cloud_3)"/>
         <remap from="cloud4"       to="$(arg cloud_4)"/>
         <remap from="full_cloud" to="$(arg radar_full_cloud_topic_name)"/>
-        <param name="frequency"    value="1"/>
-        <param name="target_frame" value="odom"/>
+        <param name="frequency"    value="$(arg rate)"/>
+        <param name="target_frame" value="$(arg target_frame)"/>
     </node>
 
     <arg name="n_clouds" default="4"/>
