@@ -6,12 +6,14 @@
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <fstream>
-
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <tf/tf.h>
+#include <tf/transform_listener.h>
 class SaveRadarLidar
 {
     using DoublePair = std::pair<double, double>;
 public:
-    SaveRadarLidar(): spinner(2), pointclouds_subs_sync_(NULL)
+    SaveRadarLidar(ros::NodeHandle &nh): spinner(2), pointclouds_subs_sync_(NULL), tf_listener_(nh)
     {
         //Lidar and Radar pointcloud sync subscriber
         pnh_.param("sychronization_margin", synch_margin_queue_,10);
@@ -19,17 +21,22 @@ public:
         pnh_.param("max_range", max_range_, 20.0);
         pnh_.param("separator", separator_, std::string(" "));
 
+
+
         pnh_.param("min_radar_measures", min_radar_measures_, 5);
 
         pc_sub_lidar_.reset(new message_filters::Subscriber<sensor_msgs::LaserScan>(pnh_, "/lidar_scan", 1));
         pc_sub_radar_.reset(new message_filters::Subscriber<sensor_msgs::LaserScan>(pnh_, "/radar_scan", 1));
         pc_sub_ground_truth_.reset(new message_filters::Subscriber<sensor_msgs::LaserScan>(pnh_, "/ground_truth_scan", 1));
+        
 
         pointclouds_subs_sync_ = new message_filters::Synchronizer<LidarRadarSyncPolicy>(LidarRadarSyncPolicy(synch_margin_queue_), *pc_sub_lidar_, *pc_sub_radar_, *pc_sub_ground_truth_);
         pointclouds_subs_sync_->registerCallback(&SaveRadarLidar::laserCallback, this);
 
         pnh_.param("time_tolerance", time_tolerance_, 1.0);
         if(time_tolerance_ < 0) time_tolerance_ *= -1;
+
+        gt_sub_ = pnh_.subscribe("/fiducial_pose", 1, &SaveRadarLidar::poseCallback, this);
     }
     
     
@@ -39,10 +46,23 @@ public:
         ros::waitForShutdown();
     }
 private:
+
+    void poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr & msg) {
+        
+        last_gt_.setOrigin(tf::Vector3(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z));
+        tf::Quaternion q(msg->pose.pose.orientation.x, 
+                        msg->pose.pose.orientation.y, 
+                        msg->pose.pose.orientation.z, 
+                        msg->pose.pose.orientation.w );
+        last_gt_.setRotation(q);
+    }
+
     void laserCallback(const sensor_msgs::LaserScan::ConstPtr& lidar_msg,
                              const sensor_msgs::LaserScan::ConstPtr& radar_msg,
                              const sensor_msgs::LaserScan::ConstPtr& gt_msg)
     {               // We will take as inputs laser scans obtained from the PC
+
+        ROS_INFO("Here");
         auto time_diff = lidar_msg->header.stamp - radar_msg->header.stamp;
         auto time_diff2 = gt_msg->header.stamp - radar_msg->header.stamp;
         auto time_diff3 = gt_msg->header.stamp - lidar_msg->header.stamp;
@@ -52,8 +72,31 @@ private:
             ROS_WARN("Skipping pair of lidar-radar clouds because they exceed time tolerance %f > %f", time_diff.toSec(), time_tolerance_);
             return;
         }
+        tf::StampedTransform tf_b_m;
+        try {
+                tf_listener_.lookupTransform("map", "base_link", ros::Time(0), tf_b_m);
+        } catch (std::exception &e) {
+            ROS_INFO("No transform. Content: %s", e.what());
+            return;
+        }
 
-        ROS_INFO_ONCE("Got 3 SCANS --> saving file");
+        tf::Transform t_delta = last_gt_.inverse() * tf_b_m;
+        
+        tf::Matrix3x3 T (t_delta.getRotation());
+        double r,p,y;
+        T.getRPY(r,p,y);
+        if (fabs(y) > 0.5) {
+            ROS_INFO ("Skipping measure because of yaw");
+            return;
+        }
+        
+        auto v = t_delta.getOrigin();
+        if (fabs(v.getX())> 1.0) {
+            ROS_INFO ("Skipping measure because of dist");
+            return;
+        }
+
+        ROS_INFO("Got 3 SCANS --> saving file");
 
         // Write the messages to a file
         static unsigned int id = 0;
@@ -115,14 +158,18 @@ private:
     ros::NodeHandle pnh_{"~"};
     ros::AsyncSpinner spinner;
     ros::Publisher odom_sub_;
+    ros::Subscriber gt_sub_;
+    tf::TransformListener tf_listener_;
+
+    tf::Transform last_gt_;
 };
 
 
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "save_radar_lidar");
-
-    class SaveRadarLidar fuser;
+    ros::NodeHandle nh;
+    class SaveRadarLidar fuser(nh);
 
     fuser.run();
 
