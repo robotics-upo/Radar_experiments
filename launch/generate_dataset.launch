@@ -20,7 +20,10 @@
     </node>
 
     <!-- Concatenate radars-->
-    <include file="$(find radar_experiments)/launch/concatenator.launch"/>
+    <include file="$(find radar_experiments)/launch/concatenator.launch">
+        <arg name="rate" value="5"/>
+        <arg name="target_frame" value="base_link"/>
+    </include>
 
     <!-- Odometry stuff -->
     <arg name="use_imu" default="false"/>
