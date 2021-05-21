@@ -1,0 +1,36 @@
+<launch>
+    <param name="use_sim_time" value="true"/>
+    <arg name="pi"   value="3.141592654"/>
+
+    <arg name="launch_static_tf"       default="true"/>
+    <arg name="play_bag"               default="true"/>
+    <arg name="sec"                    default="0"/>
+    <arg name="rate"                   default="1"/>
+    <arg name="bag_name"               default="2020-12-01-12-04-38_odom_gt.bag"/>
+    <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name)"/>
+    
+    <node name="bag_player" type="play" pkg="rosbag" 
+          args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) -q -d 4" 
+          output="screen" if="$(arg play_bag)" required="true">
+        <remap from="tf" to="tf_non"/>
+    </node>
+
+    <arg name="map2d_name"     default="tunel2d_map4"/>
+    <node pkg="map_server" name="map_server" type="map_server" args="$(find radar_experiments)/maps/$(arg map2d_name).yaml"/>
+   
+
+    <!-- Odometry stuff -->
+    <arg name="pi/2" value="1.5707963267948966"/>
+
+
+    <include file="$(find radar_experiments)/launch/frames.launch" if="$(arg launch_static_tf)"/>
+
+    <node name="refiner" type="refine_gt" pkg="radar_experiments" output="screen">
+        <remap from="gt_pose" to="fiducial_pose"/>
+    </node>
+
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find radar_experiments)/rviz/refine_gt.rviz"/>
+
+    <node name="odom_to_tf" type="odom_to_tf.py" pkg="odom_to_tf"/>
+
+</launch>
