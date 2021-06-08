@@ -7,10 +7,11 @@
     <arg name="sec"                    default="0"/>
     <arg name="rate"                   default="1"/>
     <arg name="bag_name"               default="2020-12-01-12-04-38_odom_gt.bag"/>
+    <!-- <arg name="bag_name"               default="2020-12-01-11-36-21_odom_gt.bag"/> -->
     <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name)"/>
     
     <node name="bag_player" type="play" pkg="rosbag" 
-          args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) -q -d 4" 
+          args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) -q -d 2" 
           output="screen" if="$(arg play_bag)" required="true">
         <remap from="tf" to="tf_non"/>
     </node>
@@ -27,6 +28,8 @@
 
     <node name="refiner" type="refine_gt" pkg="radar_experiments" output="screen">
         <remap from="gt_pose" to="fiducial_pose"/>
+        <!-- <param name="ignore_ids" value="1953,2246,2490,2831,4000, 4054-4065"/>   --> <!--  For bag of 11:36 -->
+        <param name="ignore_ids" value="606,1369-1371,1374, 1552, 2434,3293,3298"/>   <!--  For bag of 12:04 -->
     </node>
 
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find radar_experiments)/rviz/refine_gt.rviz"/>
