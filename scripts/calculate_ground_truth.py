@@ -15,11 +15,17 @@ class GroundTruth:
     def __init__(self):
         self.tf_buffer = Buffer()
         self.transform_listener = TransformListener(self.tf_buffer)
-        self.pose_sub = rospy.Subscriber("pose", PoseWithCovarianceStamped, callback=self.poseCb)
+
         self.amcl_pose_sub = rospy.Subscriber("amcl_pose", PoseWithCovarianceStamped, callback=self.poseAmclCb)
         self.filename = rospy.get_param("~filename", default="ground_truth_stats.txt")
         self.base_frame = rospy.get_param("~base_frame", default="base_link")
         self.map_frame = rospy.get_param("~map_frame", default="map")
+        if rospy.has_param("use_covariance_subscriber"):
+            self.pose_sub = rospy.Subscriber("pose", PoseWithCovarianceStamped, callback=self.poseCovCb)
+        else:
+            self.pose_sub = rospy.Subscriber("pose", PoseStamped, callback=self.poseCb)
+
+        
 
         self.covariance = zeros(36)
         try:
@@ -31,6 +37,36 @@ class GroundTruth:
     # Each time a pose is received --> save its coords (GT) with the tf 
     # Format of the file: t x y yaw x_gt y_gt yaw_gt
     def poseCb(self, data):
+        try: 
+            self.t = self.tf_buffer.lookup_transform(self.map_frame, 
+                                                     self.base_frame,
+                                                     rospy.Time())
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            return
+
+        q = self.t.transform.rotation
+        (roll,pitch, yaw_amcl) = transformations.euler_from_quaternion([q.x, q.y, q.z, q.w])
+        
+        p_amcl = self.t.transform.translation
+        p_fid = data.pose.position
+        d1 = sqrt((p_amcl.x - p_fid.x)**2 + (p_amcl.y - p_fid.y)**2)
+
+        q_fid = data.pose.orientation
+        (roll,pitch, yaw_fid) = transformations.euler_from_quaternion((q_fid.x, q_fid.y, q_fid.z, q_fid.w))
+
+        yaw_dist = yaw_amcl-yaw_fid
+        yaw_dist -= round(yaw_dist/pi)*pi
+        yaw_dist = abs(yaw_dist)
+        
+        text = '{0} {1} {2} {3} {4} {5} {6} {7} {8} {9} {10} {11}'.format(data.header.stamp, p_amcl.x, p_amcl.y, yaw_amcl,
+                                                    p_fid.x, p_fid.y, yaw_fid, d1, yaw_dist, self.covariance[0], self.covariance[7], self.covariance[35])
+        print(text)
+        self.stats_file.write(text)
+        self.stats_file.write('\n')
+
+    # Each time a pose is received --> save its coords (GT) with the tf 
+    # Format of the file: t x y yaw x_gt y_gt yaw_gt
+    def poseCovCb(self, data):
         try: 
             self.t = self.tf_buffer.lookup_transform(self.map_frame, 
                                                      self.base_frame,
