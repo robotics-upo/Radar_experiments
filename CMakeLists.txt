@@ -26,6 +26,7 @@ SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake_modules)
 
 find_package(PCL REQUIRED)
 find_package(G2O REQUIRED)
+find_package(Armadillo REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -130,8 +131,10 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
 # include
+  src
   ${catkin_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
+  ${ARMADILLO_INCLUDE_DIRS}
 )
 
 
@@ -160,8 +163,11 @@ add_executable(lidar_radar_fusion_node src/sensor_fusion/lidar_radar_fusion.cpp)
 target_link_libraries(lidar_radar_fusion_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 add_dependencies(lidar_radar_fusion_node ${PROJECT_NAME}_gencfg ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-add_executable(lidar_radar_fusion_gm src/sensor_fusion/lidar_radar_fusion_gaussian_mixture.cpp)
-target_link_libraries(lidar_radar_fusion_gm ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+add_executable(lidar_radar_dbscan src/sensor_fusion/lidar_radar_fusion_dbscan.cpp src/dbscan/dbscan.cpp)
+target_link_libraries(lidar_radar_dbscan ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(lidar_radar_basic_fusion src/sensor_fusion/lidar_radar_fusion_basic_fusion.cpp)
+target_link_libraries(lidar_radar_basic_fusion ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 # add_dependencies(lidar_radar_fusion_gm ${PROJECT_NAME}_gencfg ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 add_executable(save_lidar_radar src/generate_dataset/save_radar_lidar.cpp)

@@ -22,6 +22,8 @@
 #include <visualization_msgs/Marker.h>
 #include <fstream>
 
+#include "dbscan/dbscan.h"
+
 #include "math_utils.hpp"
 
 // #define STEP_BY_STEP
@@ -48,7 +50,7 @@ public:
         pnh_.param("beta", beta_, 0.2);
         if(beta_ < 0.0 || beta_ > 1.0) beta_ = 0.2; //Default in case you try to set a bad value
         
-        pnh_.param("distance_threshold", d_f_, 0.5);
+        pnh_.param("distance_threshold", d_f_, 0.3);
         if(d_f_ < 0.0 ) d_f_ *= -1;
         
         pnh_.param("time_tolerance", time_tolerance_, 1.0);
@@ -104,6 +106,24 @@ public:
         ros::waitForShutdown();
     }
 private:
+
+    std::vector<Point> rangesToPoints(const sensor_msgs::LaserScan &scan) {
+        std::vector<Point> ret;
+
+        double a = scan.angle_min;
+        for (int i = 0; i < scan.ranges.size(); i++, a += scan.angle_increment) {
+            double r = scan.ranges[i];
+            Point p;
+            p.x = r * cos(a);
+            p.y = r * sin(a);
+            p.z = 0;
+            p.clusterID = UNCLASSIFIED;
+            p.original_id = i;
+
+            ret.push_back(p);
+        }
+        return ret;
+    }
     
     void pointCloudsCallback(const sensor_msgs::LaserScan::ConstPtr& lidar_msg,
                              const sensor_msgs::LaserScan::ConstPtr& radar_msg)
@@ -153,8 +173,15 @@ private:
         int cont = 0;
         int n_radar = 0;
         int fused_cont = 0;
+        auto points = rangesToPoints(lidar_scan);
+        DBSCAN dbscan(5, 0.5, points);
+        bool use_dbscan = true;
+        int n_clusters = dbscan.run();
+        ROS_INFO("DBSCAN run. N clusters: %d", n_clusters);
         for (cont = 0; cont < lidar_scan.ranges.size(); cont++) {
-            auto range = lidar_scan.ranges[cont];
+            auto range = ret.ranges[cont];
+
+            
             if (range < lidar_max_range_) {
                 if (fabs(lidar_scan.ranges[cont] - range) < d_f_ ) {
                     range = fuseRanges(range, radarDev(), lidar_scan.ranges[cont], lidarDev(lidar_scan.ranges[cont]));
@@ -171,34 +198,55 @@ private:
                 double prev_range_left = range;
                 double prev_range_right = range;
                 int max_fused_cont = 0;
-                for (int i = 1; i < n_consider && (consider_right || consider_left); i++) { //
-                    int a = cont - i;
 
-                    if (a >= 0 && consider_left) {
-                        if ( fabs(prev_range_left - lidar_scan.ranges[a])/prev_range_left < 0.1 ) {
-                            ret.ranges[a] = lidar_scan.ranges[a];
-                            prev_range_left = lidar_scan.ranges[a];
-                            fused_cont++;
-                        } else {
-                            consider_left = false;
+                if (!use_dbscan) {
+
+                    for (int i = 1; i < n_consider && (consider_right || consider_left); i++) { //
+                        int a = cont - i;
+
+                        if (a >= 0 && consider_left) {
+                            if ( fabs(prev_range_left - lidar_scan.ranges[a])/prev_range_left < 0.1 ) {
+                                ret.ranges[a] = lidar_scan.ranges[a];
+                                prev_range_left = lidar_scan.ranges[a];
+                                fused_cont++;
+                            } else {
+                                consider_left = false;
+                            }
+                        }
+                        a = cont + i;
+                        if (a < ret.ranges.size() && consider_right) {
+                            if ( fabs(prev_range_right - lidar_scan.ranges[a])/prev_range_right < 0.1 ) {
+                                ret.ranges[a] = lidar_scan.ranges[a];
+                                prev_range_right = lidar_scan.ranges[a];
+                                fused_cont++;
+                                max_fused_cont = fused_cont;
+                            } else {
+                                consider_right = false;
+                            }
+                        } 
+
+                    }
+                    cont += max_fused_cont;
+                } else {
+                    int cluster = -3;
+                    points = dbscan.getPoints();
+                    for (auto p:points) {
+                        if (p.original_id == cont) {
+                            cluster = p.clusterID;
                         }
                     }
-                    a = cont + i;
-                    if (a < ret.ranges.size() && consider_right) {
-                        if ( fabs(prev_range_right - lidar_scan.ranges[a])/prev_range_right < 0.1 ) {
-                            ret.ranges[a] = lidar_scan.ranges[a];
-                            prev_range_right = lidar_scan.ranges[a];
-                            fused_cont++;
-                            max_fused_cont = fused_cont;
-                        } else {
-                            consider_right = false;
+                    if (cluster >= 0) {
+                        for (auto p:points) {
+                            if (p.clusterID == cluster && p.original_id != cont) {
+                                ret.ranges[p.original_id] = lidar_scan.ranges[p.original_id];
+                            }
                         }
-                    } 
-
+                    }
                 }
-                cont += max_fused_cont;
             }
         }
+
+
     
         
         std::cout <<" Radar scan points: " << n_radar
