@@ -5,15 +5,12 @@
     <arg name="launch_static_tf"       default="true"/>
     <arg name="play_bag"               default="true"/>
     <arg name="sec"                    default="10"/>
-    <arg name="rate"                   default="8"/>
-    <!-- <arg name="bag_name"               default="2020-11-11-13-03-27_mapping_corcho1.bag"/> -->
-    <arg name="bag_name"               default="2020-12-01-12-04-38_odom_gt.bag"/>
-    <!-- <arg name="bag_name"               default="2020-12-01-11-36-21_odom_gt.bag"/> -->
-    <!-- <arg name="bag_name"               default="2020-12-01-10-45-22_gt.bag   "/> -->
+    <arg name="rate"                   default="4"/>
+    <arg name="bag_name"               default="2020-12-01-12-04-38_odom_gt_refined.bag"/>
     <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name)"/>
     
     <node name="bag_player" type="play" pkg="rosbag" 
-          args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) -q " 
+          args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec)  " 
           output="screen" if="$(arg play_bag)" required="true">
         <!-- <remap from="tf" to="tf_useless"/> -->
     </node>
@@ -25,9 +22,9 @@
     <!-- <arg name="scan_topic" default="/lidar_radar_fusion_node/result_laser_scan" if="$(eval arg('localization_method')=='fusion')"/>
     <include file="$(dirname)/fuse_radar_lidar.launch" if="$(eval localization_method=='fusion')"/>   -->
 
-    <arg name="scan_topic" default="/gm_fuser/fused_scan" if="$(eval arg('localization_method')=='fusion')"/>
+    <arg name="scan_topic" default="/dbscan_fuser/fused_scan" if="$(eval arg('localization_method')=='fusion')"/>
 
-    <node name="gm_fuser" pkg="radar_experiments" type="lidar_radar_fusion_gm" output="screen" >
+    <node name="dbscan_fuser" pkg="radar_experiments" type="lidar_radar_dbscan" output="screen" >
         <!-- <remap from="/lidar_scan" to="os1_cloud_node/scan"/> -->
         <param name="yaw_tolerance" value="0.13"/>
     </node>
@@ -193,7 +190,8 @@
 
     <arg name="gt_filename" default="stats_gt_saver.txt"/>
     <node name="gt_saver" pkg="radar_experiments" type="calculate_ground_truth.py" output="screen">
-        <remap from="pose" to="/fiducial_pose"/>
+        <remap from="pose" to="/ground_truth"/>
+        <!-- <remap from="pose" to="/fiducial_pose"/> -->
         <param name="filename" value="$(find radar_experiments)/stats/$(arg gt_filename)"/>
     </node>
 
