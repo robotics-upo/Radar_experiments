@@ -4,6 +4,8 @@
  *
  * See LICENSE file for distribution details
  */
+
+#include <boost/algorithm/string.hpp>
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <tf/tf.h>
@@ -41,12 +43,17 @@ typedef g2o::LinearSolverEigen<SlamBlockSolver::PoseMatrixType> SlamLinearSolver
 using namespace std;
 using namespace g2o;
 
-void changeTf(tf2::Transform &t, double x, double y, double theta)  {
+void changeTf(tf2::Transform &t, double x, double y, double theta, bool rp_to_zero = false)  {
     t.setOrigin(tf2::Vector3(x, y, 0.0));
     auto q = t.getRotation();
     tf2::Matrix3x3 M(q);
     double roll, pitch, yaw;
-    M.getRPY(roll, pitch, yaw);
+    
+    if (rp_to_zero) {
+        roll = pitch = 0.0;
+    } else {
+        M.getRPY(roll, pitch, yaw);
+    }
     q.setRPY(roll, pitch, theta);
     t.setRotation(q);
 }
@@ -93,6 +100,10 @@ class GroundTruthRefiner {
     std::string _g2o_file;
 
     int _frame_num = 0;
+
+    // Ignoring bad estimation of ground truth
+    std::string ignore_ids;
+    std::set<int> ignore_ids_set;
 
     static void get_tf_coords(double &x, double &y, double &theta, const tf2::Transform &t);
     virtual bool lookupTransform(const std::string &from, const std::string &to, const ros::Time &time,
@@ -153,10 +164,40 @@ GroundTruthRefiner::GroundTruthRefiner():tfBuffer(ros::Duration(30.0)) {
         _g2o_file = "";
     }
 
+    if (pnh.hasParam("ignore_ids")) {
+        pnh.getParam("ignore_ids", ignore_ids);
+        
+        std::vector<std::string> results;
+
+        boost::split(results, ignore_ids, boost::is_any_of(","));
+
+        for (auto x:results) {
+
+            if (x.find('-') != std::string::npos ) {
+                std::vector<std::string> results;
+
+                boost::split(results, x, boost::is_any_of("-"));
+
+                if (results.size() == 2) {
+                    cout << "Ignoring ids from: " << results[0] << " to " << results[1] << endl;
+                    for (int cont = stoi(results[0]); cont <= std::stoi(results[1]); cont ++) {
+                        ignore_ids_set.insert(cont);
+                    } 
+                }
+            } else {
+
+                ignore_ids_set.insert(std::stoi(x));
+                cout << "Ignoring id: " << x << endl;
+            }
+        }
+
+    }
+
+
     // Frames
-    nh.param<std::string>("map_frame", _mapFrame, "map");
-    nh.param<std::string>("odom_frame", _odomFrame, "odom");
-    nh.param<std::string>("base_frame", _baseFrame, "base_link");
+    pnh.param<std::string>("map_frame", _mapFrame, "map");
+    pnh.param<std::string>("odom_frame", _odomFrame, "odom");
+    pnh.param<std::string>("base_frame", _baseFrame, "base_link");
 
     // Information of odometry, etc.
     double rot_noise, trans_noise_x, trans_noise_y;
@@ -195,6 +236,13 @@ GroundTruthRefiner::GroundTruthRefiner():tfBuffer(ros::Duration(30.0)) {
 }
 
 void GroundTruthRefiner::groundTruthCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &pose) {
+    
+    if (ignore_ids_set.count(pose->header.seq)) {
+        ROS_INFO("Ignoring groundtruth with id: %d", pose->header.seq);
+        return;
+    }
+    
+    
     tf2::Quaternion q;
     tf2::fromMsg(pose->pose.pose.orientation, q);
     tf2::Matrix3x3 M(q);
@@ -249,6 +297,9 @@ void GroundTruthRefiner::groundTruthCallback(const geometry_msgs::PoseWithCovari
     geometry_msgs::PoseStamped p;
 
     p.header = pose->header;
+    p.header.stamp = ros::Time::now();
+
+    // ROS_INFO("Got ground truth. Stamp: %ld. Stamp of the message: %ld", p.header.stamp.toNSec(), pose->header.stamp.toNSec());
     p.pose = pose->pose.pose;
 
     original_path.poses.push_back(p);
@@ -272,7 +323,6 @@ bool GroundTruthRefiner::updateOdometry() {
 
     if (d_ > _dist_thres || fabs(theta) > _ang_thres) {
 
-        ROS_INFO("Performing an Odometry Update");
         auto pos = dynamic_cast<VertexSE2 *>(_optimizer.vertex(_frame_num - 1))->estimate();
 
         tf2::Transform t;
@@ -290,7 +340,18 @@ bool GroundTruthRefiner::updateOdometry() {
         robot->setId(_frame_num);
         robot->setEstimate(robot_pose);
         _optimizer.addVertex(robot);
+
+        // Register pose in original path
+        geometry_msgs::PoseStamped p;
+        p.header.stamp = ros::Time::now();
+        p.header.seq = _frame_num;
+        p.header.frame_id = _mapFrame;
+        p.pose.position.x = x; p.pose.position.y = y;
+        tf::Quaternion t_q;
+        t_q.setRPY(0,0, theta);
+        tf::quaternionTFToMsg(t_q,p.pose.orientation);
         
+        original_path.poses.push_back(p);
         
 
         // Add odometry constraint
@@ -309,17 +370,7 @@ bool GroundTruthRefiner::updateOdometry() {
         _frame_num++;
         _last_tf_odom_base = t_odom_base;
 
-        // Register pose in original path
-        geometry_msgs::PoseStamped p;
-        p.header.stamp = ros::Time::now();
-        p.header.seq = _frame_num;
-        p.header.frame_id = _mapFrame;
-        p.pose.position.x = x; p.pose.position.y = y;
-        tf::Quaternion t_q;
-        t_q.setRPY(0,0, theta);
-        tf::quaternionTFToMsg(t_q,p.pose.orientation);
-
-        original_path.poses.push_back(p);
+    
 
 
         return true;
@@ -354,7 +405,6 @@ void GroundTruthRefiner::optimize(int n_rounds) {
   _optimizer.initializeOptimization();
   _optimizer.optimize(n_rounds);
   ROS_INFO("Done Optimizing.");
-  int max_id = 0;
 
   // Initialize path for visualization
   optimized_path.poses.clear();
@@ -365,17 +415,16 @@ void GroundTruthRefiner::optimize(int n_rounds) {
 
   original_path.header = optimized_path.header;
 
-  for (auto &x:_optimizer.vertices()) {
 
-        auto y = dynamic_cast<VertexSE2 *> ( x.second);
+  for (int cont = 1; cont < _optimizer.vertices().size(); cont++) {
+
+        auto y = dynamic_cast<VertexSE2 *> (_optimizer.vertices().at(cont));
         auto &pos = y->estimate();
         if (y == nullptr || y->id() == 0) continue;
 
-        max_id = std::max(max_id, x.first); // Get max ID
-
         geometry_msgs::PoseStamped curr_pose;
         tf2::Transform t;
-        changeTf(t, pos[0], pos[1], pos[2]);
+        changeTf(t, pos[0], pos[1], pos[2], true);
         curr_pose.pose.orientation = tf2::toMsg(t.getRotation());
         curr_pose.pose.position.x = pos[0];
         curr_pose.pose.position.y = pos[1];
@@ -384,9 +433,6 @@ void GroundTruthRefiner::optimize(int n_rounds) {
         optimized_path.poses.push_back(curr_pose);
 
   }
-  auto y = dynamic_cast<VertexSE2 *>(_optimizer.vertices()[max_id]);
-  auto pos = y->estimate();
-
   _original_path_pub.publish(original_path);
   _optimized_path_pub.publish(optimized_path);
 
@@ -431,6 +477,8 @@ int main(int argc, char **argv) {
     const int update_iters = update_secs*rate;
     int cont = 0;
 
+
+    
     while (ros::ok()) {
         ros::spinOnce();
         r.sleep();
