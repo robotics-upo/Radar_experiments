@@ -26,10 +26,17 @@
 
     <include file="$(find radar_experiments)/launch/frames.launch" if="$(arg launch_static_tf)"/>
 
+    <arg name="ignore_ids" default="300-380,420-430,530-630,792,851,872,873,1053,1284,1381,1384,1613"/>
+    <arg name="update_secs" default="30"/>
+    <arg name="update_rate" default="20"/>
+
     <node name="refiner" type="refine_gt" pkg="radar_experiments" output="screen">
         <remap from="gt_pose" to="fiducial_pose"/>
         <!-- <param name="ignore_ids" value="1953,2246,2490,2831,4000, 4054-4065"/>   --> <!--  For bag of 11:36 -->
-        <param name="ignore_ids" value="606,1369-1371,1374, 1552, 2434,3293,3298"/>   <!--  For bag of 12:04 -->
+        <!-- <param name="ignore_ids" value="606,1369-1371,1374, 1552, 2434,3293,3298"/>    For bag of 12:04 -->
+        <param name="ignore_ids" value="$(arg ignore_ids)"/>
+        <param name="update_secs" value="$(arg update_secs)"/>
+        <param name="update_rate" value="$(arg update_rate)"/>
     </node>
 
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find radar_experiments)/rviz/refine_gt.rviz"/>
