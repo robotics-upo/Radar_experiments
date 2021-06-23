@@ -318,10 +318,11 @@ bool GroundTruthRefiner::updateOdometry() {
     auto t_odom_step = _last_tf_odom_base.inverse() * t_odom_base;
     auto d_ = t_odom_step.getOrigin().length();
 
-    double x,y,theta;
-    get_tf_coords(x,y, theta, t_odom_step);
+    double x, y, theta;
+    double inc_x, inc_y, inc_theta;
+    get_tf_coords(inc_x, inc_y, inc_theta, t_odom_step);
 
-    if (d_ > _dist_thres || fabs(theta) > _ang_thres) {
+    if (d_ > _dist_thres || fabs(inc_theta) > _ang_thres) {
 
         auto pos = dynamic_cast<VertexSE2 *>(_optimizer.vertex(_frame_num - 1))->estimate();
 
@@ -333,7 +334,7 @@ bool GroundTruthRefiner::updateOdometry() {
 
         t = t * t_odom_step;
         get_tf_coords(x,y, theta, t);
-        ROS_INFO("Adding odometry. Coords: (%f, %f, %f)", x, y, theta);
+        ROS_INFO("Add odometry. Inc: (%f,%f,%f). Prev.: (%f, %f, %f). Coords: (%f, %f, %f)", inc_x, inc_y, inc_theta, pos[0], pos[1], pos[2], x, y, theta);
 
         const SE2 robot_pose(x, y, theta);
         VertexSE2* robot = new VertexSE2;
@@ -360,8 +361,7 @@ bool GroundTruthRefiner::updateOdometry() {
         odometry->vertices()[0] = _optimizer.vertex(_frame_num - 1);
         odometry->vertices()[1] = _optimizer.vertex(_frame_num);
 
-        get_tf_coords(x, y, theta, t_odom_step);
-        const SE2 odom_meas(x, y, theta);
+        const SE2 odom_meas(inc_x, inc_y, inc_theta);
         odometry->setMeasurement(odom_meas);
         odometry->setInformation(_odometry_information);
         _optimizer.addEdge(odometry);
@@ -462,16 +462,18 @@ int main(int argc, char **argv) {
     sleep(2); // Let the systems initialize
     std::unique_ptr<GroundTruthRefiner> node;
     node.reset(new GroundTruthRefiner);
-    double rate = 20.0;
-    ros::Rate r(rate);
+    double rate = 4.0;
+    
 
     int update_secs = 100;
 
     ros::NodeHandle pnh("~");
 
     int n_iter;
+    pnh.param("update_rate", rate, 2.0);
+    ros::Rate r(rate);
     pnh.param("n_iter", n_iter, 3);
-    pnh.param("update_secs", update_secs, 10);
+    pnh.param("update_secs", update_secs, 60);
     std::string path_export_file;
     pnh.param("path_export_file", path_export_file, std::string("optimized_path"));
     const int update_iters = update_secs*rate;
@@ -481,7 +483,7 @@ int main(int argc, char **argv) {
     
     while (ros::ok()) {
         ros::spinOnce();
-        r.sleep();
+        
         cont ++;
 
         // Check whether we have advanced or not and add a constraint
@@ -491,6 +493,7 @@ int main(int argc, char **argv) {
         if (node != nullptr && cont % update_iters == 0) {
             node->optimize(n_iter);
         }
+        r.sleep();
     }
 
     if (node->exportPath(path_export_file)) {
