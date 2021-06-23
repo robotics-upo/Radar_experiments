@@ -13,7 +13,7 @@
     <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name)"/>
     
     <node name="bag_player" type="play" pkg="rosbag" 
-          args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) -d 4" 
+          args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) -d 4 -q" 
           output="screen" if="$(arg play_bag)" required="true">
         <remap from="tf" to="tf_non"/>
     </node>
@@ -40,7 +40,7 @@
     <arg name="camera_1"           default="usb_cam_front"/>
     <arg name="image"           default="image_flipped"/>
     <arg name="fiducial_len"    default="0.18"/>
-    <arg name="ignore_fiducials" default="1-399,454,492,501-1023"/> <!-- For experiment at 11h -->
+    <arg name="ignore_fiducials" default="1-399,454, 456, 458, 461, 469, 492,501-1023"/> <!-- For experiment at 2020-12-01-11h -->
     <!-- <arg name="ignore_fiducials" default="1-399,422,454, 501-1023"/> --> <!-- For experiment at 12h -->
     <arg name="dictionary" default="16"/>
     <arg name="fiducial_len_override" default=""/>
