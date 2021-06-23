@@ -81,6 +81,7 @@ class GroundTruthRefiner {
     ros::Subscriber _gt_sub;
     ros::Publisher _original_path_pub, _optimized_path_pub;
     tf2::Transform _last_tf_odom_base;
+    geometry_msgs::PoseWithCovarianceStamped last_pose;
     tf2_ros::Buffer tfBuffer;
     std::unique_ptr<tf2_ros::TransformListener> listener;
 
@@ -241,6 +242,7 @@ void GroundTruthRefiner::groundTruthCallback(const geometry_msgs::PoseWithCovari
         ROS_INFO("Ignoring groundtruth with id: %d", pose->header.seq);
         return;
     }
+
     
     
     tf2::Quaternion q;
@@ -252,6 +254,26 @@ void GroundTruthRefiner::groundTruthCallback(const geometry_msgs::PoseWithCovari
     double x = pose->pose.pose.position.x;
     double y = pose->pose.pose.position.y;
     ROS_INFO("Received pose. Coords: (%f, %f, %f)", x, y, theta);
+
+    // Check for unusual divergence
+    if (_frame_num > 1) {
+        auto t = pose->header.stamp - last_pose.header.stamp;
+
+        if (t.toNSec() < 100000000) {
+            
+            double dx = x - last_pose.pose.pose.position.x;
+            double dy = y - last_pose.pose.pose.position.y;
+            double dist = sqrt(dx*dx + dy*dy);
+            if ( dist > 0.3 ) {
+                ROS_INFO("Discarding pose for divergence");
+                return;
+            }
+        }
+
+
+        
+    }
+    
 
 
     const SE2 robot_pose(x, y, theta);
@@ -303,6 +325,7 @@ void GroundTruthRefiner::groundTruthCallback(const geometry_msgs::PoseWithCovari
     p.pose = pose->pose.pose;
 
     original_path.poses.push_back(p);
+    last_pose = *pose;
 }
 
 bool GroundTruthRefiner::updateOdometry() {
@@ -444,7 +467,7 @@ void GroundTruthRefiner::optimize(int n_rounds) {
 
 bool GroundTruthRefiner::exportPath(const std::string &filename) const {
     // Write to File
-    std::ofstream ofs("optimized_path", std::ios::out|std::ios::binary);
+    std::ofstream ofs(filename.c_str(), std::ios::out|std::ios::binary);
 
     uint32_t serial_size = ros::serialization::serializationLength(optimized_path);
     boost::shared_array<uint8_t> obuffer(new uint8_t[serial_size]);
@@ -453,6 +476,8 @@ bool GroundTruthRefiner::exportPath(const std::string &filename) const {
     ros::serialization::serialize(ostream, optimized_path);
     ofs.write((char*) obuffer.get(), serial_size);
     ofs.close();
+
+    return true;
 }
 
 
@@ -496,6 +521,9 @@ int main(int argc, char **argv) {
         r.sleep();
     }
 
+    cout << "Experiment finished. Optimizing and exporting\n";
+
+    node->optimize(n_iter+10);
     if (node->exportPath(path_export_file)) {
         ROS_INFO("Path exported to: %s", path_export_file.c_str());
     }
