@@ -195,6 +195,11 @@
         <param name="filename" value="$(find radar_experiments)/stats/$(arg gt_filename)"/>
     </node>
 
+    <node name="initial_pose_publisher" pkg="radar_experiments" type="initial_pose_publisher.py">
+        <remap from="pose" to="/ground_truth"/>
+        
+    </node>
+
     <include file="$(find fiducial_slam)/launch/fiducial_slam.launch" if="$(arg calculate_ground_truth)">
         <arg name="map_file" value="$(find radar_experiments)/maps/map_aruco_sotano_v1.txt"/>
         <arg name="read_only_map" value="true"/>
