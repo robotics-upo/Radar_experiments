@@ -14,17 +14,12 @@ class InitialPosePublisher:
             self.pose_sub = rospy.Subscriber("pose", PoseWithCovarianceStamped, callback=self.poseCovCb)
         else:
             self.pose_sub = rospy.Subscriber("pose", PoseStamped, callback=self.poseCb)
-        self.pose_pub = rospy.Publisher("initial_pose", PoseWithCovarianceStamped, latch=True, queue_size=2)
+        self.pose_pub = rospy.Publisher("initialpose", PoseWithCovarianceStamped, latch=True, queue_size=2)
 
         self.covariance = zeros(36)
         self.covariance[0] = 0.2
         self.covariance[7] = 0.2
         self.covariance[35] = 0.2
-        try:
-            self.stats_file = open(self.filename, 'w')
-        except OSError as err:
-            print('Could not open file %s'%format(self.filename))
-        
 
     # Each time a pose is received --> publish it as the initial pose for localization (if not initialized)
     def poseCb(self, data):
@@ -36,6 +31,7 @@ class InitialPosePublisher:
             pose.pose.covariance = self.covariance
             self.init = True
             self.pose_pub.publish(pose)
+            rospy.loginfo("Published initialpose")
 
     # Each time a pose is received --> publish it as the initial pose for localization (if not initialized)
     def poseCovCb(self, data):

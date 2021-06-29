@@ -3,16 +3,21 @@
     <arg name="pi"   value="3.141592654"/>
 
     <arg name="launch_static_tf"       default="true"/>
-    <arg name="play_bag"               default="true"/>
     <arg name="sec"                    default="10"/>
     <arg name="rate"                   default="4"/>
     <arg name="bag_name"               default="2020-12-01-12-04-38_odom_gt_refined.bag"/>
     <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name)"/>
+    <arg name="use_tf_bag" default="false" />
     
     <node name="bag_player" type="play" pkg="rosbag" 
           args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec)  " 
-          output="screen" if="$(arg play_bag)" required="true">
-        <!-- <remap from="tf" to="tf_useless"/> -->
+          output="screen"  required="true">
+        <remap from="tf" to="tf_useless" unless="$(arg use_tf_bag)"/>
+    </node>
+
+    <!-- <node name="odom_to_tf" type="odom_to_tf.py" pkg="odom_to_tf" unless="$(arg use_tf_bag)"/> -->
+    <node pkg="idmind_navigation" type="odometry_node.py" name="odometry_node_ticks" unless="$(arg use_tf_bag)">
+        <param name="/bot/base_width" value="0.65"/>
     </node>
 
     <!-- Depending on the localization method, start fusion or just remap scans-->
@@ -189,13 +194,13 @@
     </node>
 
     <arg name="gt_filename" default="stats_gt_saver.txt"/>
-    <node name="gt_saver" pkg="radar_experiments" type="calculate_ground_truth.py" output="screen">
+    <node name="gt_saver" pkg="radar_experiments" type="calculate_ground_truth.py" >
         <remap from="pose" to="/ground_truth"/>
         <!-- <remap from="pose" to="/fiducial_pose"/> -->
         <param name="filename" value="$(find radar_experiments)/stats/$(arg gt_filename)"/>
     </node>
 
-    <node name="initial_pose_publisher" pkg="radar_experiments" type="initial_pose_publisher.py">
+    <node name="initial_pose_publisher" pkg="radar_experiments" type="initial_pose_publisher.py" output="screen">
         <remap from="pose" to="/ground_truth"/>
         
     </node>
