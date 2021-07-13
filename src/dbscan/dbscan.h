@@ -20,7 +20,7 @@ typedef struct Point_
 
 class DBSCAN {
 public:    
-    DBSCAN(unsigned int minPts, float eps, vector<Point> &points){
+    DBSCAN(unsigned int minPts, float eps, std::vector<Point> &points){
         m_minPoints = minPts;
         m_epsilon = eps;
         m_points = points;
