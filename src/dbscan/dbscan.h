@@ -11,8 +11,6 @@
 #define SUCCESS 0
 #define FAILURE -3
 
-using namespace std;
-
 typedef struct Point_
 {
     float x, y, z;  // X, Y, Z position
@@ -30,18 +28,18 @@ public:
     }
     ~DBSCAN(){}
 
-    int run();
-    vector<int> calculateCluster(Point point);
-    int expandCluster(Point point, int clusterID);
+    virtual int run();
+    virtual std::vector<int> calculateCluster(Point point);
+    virtual int expandCluster(Point point, int clusterID);
     inline double calculateDistance(const Point& pointCore, const Point& pointTarget);
 
-    inline vector<Point> getPoints() {return m_points;}
+    inline std::vector<Point> getPoints() {return m_points;}
 
     int getTotalPointSize() {return m_pointSize;}
     int getMinimumClusterSize() {return m_minPoints;}
     int getEpsilonSize() {return m_epsilon;}
-private:
-    vector<Point> m_points;
+protected:
+    std::vector<Point> m_points;
     unsigned int m_pointSize;
     unsigned int m_minPoints;
     float m_epsilon;

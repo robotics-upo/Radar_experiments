@@ -1,5 +1,7 @@
 #include "dbscan.h"
 
+using namespace std;
+
 int DBSCAN::run()
 {
     int clusterID = 1;
