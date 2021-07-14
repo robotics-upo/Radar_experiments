@@ -12,14 +12,9 @@ public:
   double d;
   
   //! @brief Default constructor
-  Line() {
-    v(0) = v(1) = d = 0.0;
-  }
-  
+  Line();
   //! @brief Recommended constructor
-  Line(const Eigen::Vector2d v_, double d_):v(v_),d(d_) {
-    
-  }
+  Line(const Eigen::Vector2d v_, double d_);
   
   //! @brief Returns the distance from the point v_ to the Line
   //! @return The distance from v_ to the Line
@@ -28,29 +23,6 @@ public:
   virtual std::string toString() const;
   
   void makeDPositive();
-  
 };
-
-double Line::distance(const Eigen::Vector2d v_) const
-{
-  return fabs(v_.dot(v) - d); 
-}
-
-std::string Line::toString() const
-{
-  std::ostringstream os;
-  
-  os << "n = " << v.transpose() << "\t d = " << d;
-  
-  return os.str();
-}
-
-void Line::makeDPositive()
-{
-  if (d < 0.0) {
-    d *= -1.0;
-    v *= -1.0;
-  }
-}
 
 #endif

@@ -6,7 +6,7 @@
 #include <random>
 #include <queue>
 #include "dbscan.h"
-#include "detected_line.hpp"
+#include "detected_line.h"
 #include <eigen3/Eigen/Geometry>
 #include <eigen3/Eigen/Eigenvalues>
 
@@ -38,11 +38,10 @@ protected:
     std::vector<DetectedLine> m_detected_lines;
     DetectedLine m_curr_line;
     std::queue<int> m_q;
+    double m_gamma;
     // For random numbers
     static std::default_random_engine m_generator;
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix2d> m_es;
-
-    std::vector <Point> m_points;
 
     int getNearestNeighbor(int index) const;
 

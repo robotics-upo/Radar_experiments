@@ -10,7 +10,7 @@
     <arg name="use_tf_bag" default="false" />
     
     <node name="bag_player" type="play" pkg="rosbag" 
-          args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec)  " 
+          args="$(arg bag_file) -r $(arg rate) --clock -s $(arg sec) --quiet " 
           output="screen"  required="true">
         <remap from="tf" to="tf_useless" unless="$(arg use_tf_bag)"/>
     </node>

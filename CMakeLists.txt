@@ -165,7 +165,9 @@ add_executable(lidar_radar_fusion_node src/sensor_fusion/lidar_radar_fusion.cpp)
 target_link_libraries(lidar_radar_fusion_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 add_dependencies(lidar_radar_fusion_node ${PROJECT_NAME}_gencfg ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-add_executable(lidar_radar_dbscan src/sensor_fusion/lidar_radar_fusion_dbscan.cpp src/dbscan/dbscan.cpp src/dbscan/dbscan_lines.cpp)
+add_executable(lidar_radar_dbscan src/sensor_fusion/lidar_radar_fusion_dbscan.cpp src/dbscan/dbscan.cpp src/dbscan/dbscan_lines.cpp
+          src/dbscan/line.cpp src/dbscan/detected_line.cpp
+)
 target_link_libraries(lidar_radar_dbscan ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(lidar_radar_basic_fusion src/sensor_fusion/lidar_radar_fusion_basic_fusion.cpp)

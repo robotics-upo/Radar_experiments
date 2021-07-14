@@ -1,12 +1,11 @@
 #include "dbscan_lines.h"
-#include <eigen3/Eigen/Eigenvalues>
-#include "detected_line.hpp"
-#include <queue>
 
 using namespace std;
 default_random_engine DBSCANLines::m_generator;
 
 DBSCANLines::DBSCANLines(unsigned int minPts, float eps, std::vector<Point> &points):DBSCAN(minPts, eps, points)  {
+    printf("Points: %d\n", (int)m_points.size());
+    m_gamma = 0.1; // TODO: add parameter
 }
 
 int DBSCANLines::run()
@@ -15,6 +14,7 @@ int DBSCANLines::run()
     
     // First try to detect lines
     m_available_points = m_points.size();
+    printf("DBSCANLines::run() --> avaliable points: %d\n", m_available_points);
     while (m_available_points > 0)
     {
         int p = getRandomPoint();
@@ -28,8 +28,14 @@ int DBSCANLines::run()
         }
     }
 
-    // Then detect groups of unclassified data as a regular DBScan
     vector<Point>::iterator iter;
+    for(iter = m_points.begin(); iter != m_points.end(); ++iter) {
+        if (iter->clusterID == FAILURE) {
+            iter->clusterID = UNCLASSIFIED;
+        }
+    }
+
+    // Then detect groups of unclassified data as a regular DBScan
     for(iter = m_points.begin(); iter != m_points.end(); ++iter)
     {
         if ( iter->clusterID == UNCLASSIFIED )
@@ -46,8 +52,6 @@ int DBSCANLines::run()
 
  int DBSCANLines::getLine(int candidate, int region_id) {
     int nearest = getNearestNeighbor(candidate);
-
-    std::vector<int> curr_region;
     
     if (nearest > 0) 
     {
@@ -80,14 +84,14 @@ int DBSCANLines::run()
       // The queue has been emptied --> clear possible QUEUE status and add the region to the detected planes if condition of step 12 (Algorithm 1)
       if (m_curr_line.n_points > m_minPoints) {
         m_curr_line.makeDPositive();
-//         std::cout << "Detected line: " << m_curr_line.toString() << std::endl;
+         std::cout << "Detected line: " << m_curr_line.toString() << std::endl;
         m_detected_lines.push_back(m_curr_line);
       }
     } else {
       // No nearest neighbor available --> discard (to R_PRIMA)
       m_points[candidate].clusterID = (int)FAILURE;
       m_available_points--;
-      return -1;
+      return FAILURE;
     }
     return region_id;
  }
@@ -183,7 +187,7 @@ bool DBSCANLines::updateMatrices(const Eigen::Vector2d& v)
   
   
   // Check if the new plane meets the constraint of algorithm 1 step 8. If so, update the values of the matrices of the class
-  if (_p.mse < m_epsilon && _p.distance(v) < m_epsilon) 
+  if (_p.mse < m_epsilon && _p.distance(v) < m_gamma) 
   {
     // Meets the constraints --> Actualize the plane
     _p.r_g = _p.s_g * div_1;
