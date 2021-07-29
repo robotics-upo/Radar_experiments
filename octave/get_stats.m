@@ -51,6 +51,16 @@ function stats=get_stats(data, dt)
     stats(k+1,5) = mean(curr_data_vec(:,3));
     stats(k+1,6) = mean(curr_data_vec(:,4));
     stats(k+1,7) = i;
+    n_success = 0;
+    % Calculate the percentage of success. TODO: max error?
+    for j=1:length(data)
+      if (curr_data_vec(j,1) < 0.5 && curr_data_vec(j,2) < 0.5)
+        n_success++;
+      end
+        
+      
+    end
+    stats(k+1,8) = n_success / length(data);
   end
   
 end
