@@ -11,6 +11,7 @@ DBSCANLines::DBSCANLines(unsigned int minPts, float eps, std::vector<Point> &poi
 int DBSCANLines::run()
 {
     int clusterID = 1;
+    m_n_lines = 0;
     
     // First try to detect lines
     m_available_points = m_points.size();

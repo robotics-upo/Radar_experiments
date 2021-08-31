@@ -32,8 +32,9 @@ public:
             return pt;
          }
     
-protected:
+
     int m_n_lines = 0;
+protected:
     int m_available_points = -1;
     std::vector<DetectedLine> m_detected_lines;
     DetectedLine m_curr_line;
