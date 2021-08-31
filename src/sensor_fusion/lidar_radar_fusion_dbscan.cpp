@@ -33,7 +33,7 @@ class LidarRadarFuser
 {
     using DoublePair = std::pair<double, double>;
 public:
-    LidarRadarFuser(): spinner(2), laser_scans_subs_sync_(NULL)
+    LidarRadarFuser(): spinner(2), laser_scans_subs_sync_(NULL), radar_data_file_("radar_stats.m", std::ios::out)
     {
         //Lidar and Radar pointcloud sync subscriber
         pnh_.param("sychronization_margin", synch_margin_queue_,10);
@@ -45,6 +45,7 @@ public:
         laser_scans_subs_sync_->registerCallback(&LidarRadarFuser::laser_scansCallback, this);
 
         fused_scan_pub_ = pnh_.advertise<sensor_msgs::LaserScan>("fused_scan", 2);
+        segmented_scan_pub_ = pnh_.advertise<sensor_msgs::LaserScan>("segmented_scan", 2);
         fused_scan_marker_pub_ = pnh_.advertise<visualization_msgs::Marker>("fused_scan_marker", 2);
 
         //Params....
@@ -66,8 +67,6 @@ public:
         pnh_.param("lidar_max_range", lidar_max_range_, 120.0);
         if(lidar_max_range_ < 0) lidar_max_range_ *= -1;
         //Radar enhacement params
-        pnh_.param("max_radar_acc_yaw_incr", max_radar_acc_yaw_incr_, 0.4);
-        pnh_.param("max_radar_acc_time", max_radar_acc_time_, 1.0);
         pnh_.param("odom_frame_id", odom_frame_id_, (std::string)"odom");
         pnh_.param("robot_base_frame_id", robot_base_frame_id_, (std::string)"base_link");
 
@@ -134,6 +133,27 @@ private:
         //In case two range measurements verify this inequality, calculate R fusion and put it into the result fused cloud
         auto fused_scan = createFusedScan(*lidar_msg, *radar_msg);
         fused_scan_pub_.publish (fused_scan);
+
+        auto segmented_scan = createSegmentedScan(*lidar_msg);
+        segmented_scan_pub_.publish(segmented_scan);
+    }
+
+    sensor_msgs::LaserScan createSegmentedScan(const sensor_msgs::LaserScan &lidar_scan){
+        auto points = rangesToPoints(lidar_scan);
+        DBSCANLines dbscan(5, 0.5, points);
+        sensor_msgs::LaserScan ret = lidar_scan;
+        dbscan.run();
+        auto clustered_points = dbscan.getPoints();
+
+        // ROS_INFO("NLines = ", dbscan.m_n_lines);
+
+        for (auto p:clustered_points) {
+            if (p.clusterID < 0 || p.clusterID >= dbscan.m_n_lines) {
+                ret.ranges[p.original_id] = std::numeric_limits<float>::infinity();
+            }
+        }
+
+        return ret;
     }
 
     sensor_msgs::LaserScan createFusedScan(const sensor_msgs::LaserScan &lidar_scan, const sensor_msgs::LaserScan &radar_scan){
@@ -166,15 +186,15 @@ private:
                 }
                 ret.ranges[cont] = range;
 
-                // Then add the lidar points that likely also are true: expand the laser in the proximities of the radar measures:
+                // Then add the lidar points that likely also are true: expand the radar measure to the closest cluster
                 int cluster = -3;
                 points = dbscan->getPoints();
-
                 for (auto p:points) {
                     if (p.original_id == cont) {
                         cluster = p.clusterID;
                     }
                 }
+                
                 if (cluster >= 0) {
                     for (auto p:points) {
                         if (p.clusterID == cluster && p.original_id != cont) {
@@ -192,17 +212,39 @@ private:
             }
         }
 
-
-
         for (auto p:radar_scan.ranges) {
             if (p < lidar_max_range_) {
                 n_radar++;
             }
         }
 
+        int n_lidar = 0;
+
+        for (auto p:lidar_scan.ranges) {
+            if (p < lidar_max_range_ && p > 0.02) {
+                n_lidar++;
+            }
+        }
+
+        int n_cluster = 0;
+        int n_lines = 100000;
+        auto db_line = dynamic_cast<DBSCANLines*>(dbscan);
+        if (db_line != NULL) {
+            n_lines = db_line->m_n_lines;
+        }
+        for (auto p:points) {
+            if (p.clusterID >= 0 && p.clusterID < n_lines) {
+                n_cluster++;
+            }
+        }
+
+        radar_data_file_ << radar_scan.header.stamp << "\t";
+        radar_data_file_ << n_lidar << " " << n_radar << "\t" << fused_cont << "\t" << n_cluster << "\n";
+
         std::cout <<" Radar scan points: " << n_radar
-                  <<" Lidar scan points: " << lidar_scan.ranges.size()
-                  <<" Fused scan points: " << fused_cont << std::endl;
+                  <<" Lidar scan points: " << n_lidar
+                  <<" Clustered lidar scan points: " << fused_cont
+                  <<" Fused scan points: " << fused_cont << " N_lines = " << n_lines << std::endl;
 
         delete dbscan;
 
@@ -286,6 +328,7 @@ private:
     ros::AsyncSpinner spinner;
     ros::Subscriber odom_sub_;
     ros::Publisher  fused_scan_pub_;
+    ros::Publisher  segmented_scan_pub_;
     ros::Publisher  fused_scan_marker_pub_;
     tf::TransformListener tf_listener_;
 
@@ -317,8 +360,7 @@ private:
 
     double lidar_max_range_;
 
-    double max_radar_acc_time_;
-    double max_radar_acc_yaw_incr_;
+    
 
     std::ofstream radar_data_file_;
     bool save_radar_data_{false};
