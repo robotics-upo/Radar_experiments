@@ -2,9 +2,9 @@ close all % Close all figures and start it over!
 
 % Parameters
 fontsize = 18;
-#experiment='_12_';   # or ...
+#experiment='_11_';   # or ...
 #experiment = '_27_nov_13_';
-experiment = '_27_nov_12_14_';
+experiment = '_27_nov_12_47_';
 n_max = 5;
 lw = 2;
 dt = 20;
@@ -26,6 +26,8 @@ cd ../stats
 data_dbscan = load_data(1,n_max,strcat('stats_dbscan_lines',experiment));
 
 
+
+
 a = get_stats(data_dbscan, dt);
 plot(a(:,7), a(:,1), "linewidth", lw);
 data_lidar = load_data(1,n_max,strcat('stats_lidar',experiment));
@@ -36,11 +38,17 @@ plot(b(:,7), b(:,1),'g', "linewidth", lw);
 data_radar = load_data(1,n_max,strcat('stats_radar',experiment));
 c = get_stats(data_radar, dt);
 plot(c(:,7), c(:,1),'r', "linewidth", lw);
+
+data_cluster = load_data(1,n_max,strcat('stats_segmented',experiment));
+d = get_stats(data_cluster, dt);
+plot(d(:,7), d(:,1),'k', "linewidth", lw);
+
+
 axis("labely");
 hy1 = ylabel("Position error (m)");
 set (hy1, "fontsize", fontsize) ;
 
-printf("Mean position errors: %f, %f, %f\n", mean(a(:,1)), mean(b(:,1)), mean(c(:,1)))
+printf("Mean position errors: %f, %f, %f, %f\n", mean(a(:,1)), mean(b(:,1)), mean(c(:,1)),mean(d(:,1)))
 
 %figure(2)
 pos = 2*(v_size + mini_margin) + margin;
@@ -49,11 +57,12 @@ plot(a(:,7), a(:,2),'b', "linewidth", lw);
 hold on;
 plot(b(:,7), b(:,2),'g', "linewidth", lw);
 plot(c(:,7), c(:,2),'r', "linewidth", lw);
+plot(d(:,7), d(:,2),'k', "linewidth", lw);
 axis("labely");
 hy2 = ylabel("Orientation error (rad)");
 set (hy2, "fontsize", fontsize);
 
-printf("Mean orientation errors: %f, %f, %f\n", mean(a(:,2)), mean(b(:,2)), mean(c(:,2)))
+printf("Mean orientation errors: %f, %f, %f, %f\n", mean(a(:,2)), mean(b(:,2)), mean(c(:,2)), mean(d(:,2)))
 
 % Plot uncertainty AMCL dist
 pos = 1*(v_size + mini_margin) + margin;
@@ -62,17 +71,19 @@ plot(a(:,7), a(:,3),'b', "linewidth", lw);
 hold on;
 plot(b(:,7), b(:,3),'g', "linewidth", lw);
 plot(c(:,7), c(:,3),'r', "linewidth", lw);
+plot(d(:,7), d(:,3),'k', "linewidth", lw);
 axis("labely");
 hy3 = ylabel("AMCL uncert. (m)");
 set (hy3, "fontsize", fontsize);
 
-printf("Mean AMCL uncertainty: %f, %f, %f\n", mean(a(:,3)), mean(b(:,3)), mean(c(:,3)));
+printf("Mean AMCL uncertainty: %f, %f, %f, %f\n", mean(a(:,3)), mean(b(:,3)), mean(c(:,3)), mean(d(:,3)));
 
 hax4 = subplot ("position", [left margin width v_size]);
 plot(a(:,7), a(:,4),'b', "linewidth", lw);
 hold on;
 plot(b(:,7), b(:,4),'g', "linewidth", lw);
 plot(c(:,7), c(:,4),'r', "linewidth", lw);
+plot(d(:,7), d(:,4),'k', "linewidth", lw);
 hx1 = xlabel ("Time (s)");
 set (hx1, "fontsize", fontsize) 
 hy4 = ylabel("AMCL uncert. (rad)")
@@ -83,14 +94,16 @@ set(hax3, "fontsize", fontsize, "linewidth", 2);
 set(hax2, "fontsize", fontsize, "linewidth", 2);
 set(hax1, "fontsize", fontsize, "linewidth", 2);
 
-printf("Mean AMCL uncertainty: %f, %f, %f\n", mean(a(:,4)), mean(b(:,4)), mean(c(:,4)))
+printf("Mean AMCL uncertainty: %f, %f, %f, %f\n", mean(a(:,4)), mean(b(:,4)), mean(c(:,4)), mean(d(:,4)))
 
-printf("Success rate a:\n")
-a(:,8)
-printf("Success rate b:\n") 
-b(:,8)
-printf("Success rate c:\n") 
-c(:,8)
+printf("Success rate a: ")
+a(:,8)'
+printf("Success rate b: ") 
+b(:,8)'
+printf("Success rate c: ") 
+c(:,8)'
+printf("Success rate d: ") 
+d(:,8)'
 
 printf("End\n")
 
