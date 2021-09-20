@@ -3,9 +3,10 @@
 using namespace std;
 default_random_engine DBSCANLines::m_generator;
 
-DBSCANLines::DBSCANLines(unsigned int minPts, float eps, std::vector<Point> &points):DBSCAN(minPts, eps, points)  {
+DBSCANLines::DBSCANLines(unsigned int minPts, float eps, std::vector<Point> &points, double gamma, double theta):DBSCAN(minPts, eps, points)  {
     printf("Points: %d\n", (int)m_points.size());
-    m_gamma = 0.1; // TODO: add parameter
+    m_gamma = gamma; 
+    m_theta = theta;
 }
 
 int DBSCANLines::run()
@@ -188,7 +189,7 @@ bool DBSCANLines::updateMatrices(const Eigen::Vector2d& v)
   
   
   // Check if the new plane meets the constraint of algorithm 1 step 8. If so, update the values of the matrices of the class
-  if (_p.mse < m_epsilon && _p.distance(v) < m_gamma) 
+  if (_p.mse < m_theta && _p.distance(v) < m_gamma) 
   {
     // Meets the constraints --> Actualize the plane
     _p.r_g = _p.s_g * div_1;

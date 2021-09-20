@@ -16,7 +16,7 @@
 // Adds line detection to DBScan clustering method, 
 class DBSCANLines:public DBSCAN {
 public:    
-    DBSCANLines(unsigned int minPts, float eps, std::vector<Point> &points);
+    DBSCANLines(unsigned int minPts, float eps, std::vector<Point> &points, double gamma = 0.1, double theta = 0.01);
 
     ~DBSCANLines(){}
 
@@ -39,7 +39,7 @@ protected:
     std::vector<DetectedLine> m_detected_lines;
     DetectedLine m_curr_line;
     std::queue<int> m_q;
-    double m_gamma;
+    double m_gamma, m_theta;
     // For random numbers
     static std::default_random_engine m_generator;
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix2d> m_es;
