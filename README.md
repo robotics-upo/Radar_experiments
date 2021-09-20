@@ -1,43 +1,36 @@
-# Experiments Radar-Aruco to avoid Smoke
+# Localization experiments. Submitted to ICRA 2022
 
-This repo contains some configuration files to use in the research of smoke avoidance navigation and localization.
-To download bag files to use with these launch files go to the dropbox folder:
+This repository contains the source code and additional configuration files to reproduce the results of our work submitted to ICRA2022:
 
-[DropBox Bag Folder](https://www.dropbox.com/sh/kt2q8ulnx4171dk/AACkiA1Xx5g9ah2zWdHbek7Fa?dl=0)
+D. Alejo, R. Rey, J. A. Cobano, F. Caballero and L. Merino, "Data  fusion  of  low-cost  RADAR  and  LIDAR  for  reliable  ground  robotlocalization  under  low-visibility  conditions"
+
+The dataset used in this paper can be downloaded at:
+
+[Dataset web page](https://www.dropbox.com/sh/kt2q8ulnx4171dk/AACkiA1Xx5g9ah2zWdHbek7Fa?dl=0)
 
 [DropBox MultiRadar Bag Folder](https://www.dropbox.com/sh/k868avekgrstwzs/AADj7J1sI7gRccPbI_15fMdOa?dl=0)
 
 By **default** the launch ```make_aruco_map.launch``` is configured to avoid using the /tf and /tf_static topics in the case they are present on the bag file. So if you need to use these topics because some reasons, just run the launch file with the arg *use_bag_tf* set to true.
 
-Of course, to use this launch you will need to download some ROS Packages such as [MCL3D](https://github.com/robotics-upo/mcl3d/) [Fiducials](https://github.com/robotics-upo/fiducials) and [Odom To Tf](https://github.com/robotics-upo/odom_to_tf). [Cloud Concatenator](https://github.com/robotics-upo/cloud_concatenator). Just follow the instructions on every package, clone them into your catkin workspace an compile.
-
-## Localize your robot
-
-The launch file come with a default position in the attached map, but it happens that some bags are recorded from a different start position, so you will need to initially localize them, using "P" key in the RViz window.
-
-## Sensor Fusion
-
-### Dependencies
+## Dependencies
     
 - Cloud concatenator: https://github.com/robotics-upo/cloud_concatenator
 - pcl_ros: ```sudo apt install ros-$ROS_DISTRO-pcl-ros```
 - pointcloud_to_laser_scan ```sudo apt install ros-$ROS_DISTRO-pointcloud-to-laserscan```
-- raposa_marker: 
-- odom_to_tf
+- raposa_marker: https://github.com/robotics-upo/upo_markers
+- odom_to_tf:  https://github.com/robotics-upo/odom_to_tf
 
-You can downlaod the repository and execute ```./scripts/install_fusion_dependencies.sh``` it will install APT packages and downlaod necessary repos to avoid doing it manually. 
+You can downlaod the repository and execute ```./scripts/install_fusion_dependencies.sh``` from the source directory of a catkin workspace. It will install APT packages and downlaod necessary repos to avoid doing it manually. In addition it asks you if you want to download the dataset.
 
-To test the radar and lidar fusion node you will need a dataset. You can download it [here](https://www.dropbox.com/s/qr5nr5gbng1jflh/2020-12-01-13-21-03.bag?dl=0) a bag containing pointcloud and radar data from December experiments. Download into your home folder and launch the main launch as it follows:
+Once you download our dataset into your home folder, you can launch the main an experiment as follows:
 
 ```
 roslaunch radar_experiments localize_with_gt.launch gt_filename:=stats_radar.txt localize_method:=fusion
 ```
 
-It will run the fusion node and launch a rviz visualization window where you can select which pointclouds you want to visualize.
+It will run the fusion node and launch a rviz visualization window where you can select which radar scans you want to visualize.
 
-The implementation steps are detailed in the document docs/Lidar_and_radar_fusion_implementation_details.pdf 
-
-### Parameters
+### Parameters for the implementation of P. Fritsche & B. Wagner 2017 "Modeling structure and aerosol concentration with fused radar and LiDAR data in environments with changing visibility" (IROS 2017)
 
 Related to the algorithms:
 
