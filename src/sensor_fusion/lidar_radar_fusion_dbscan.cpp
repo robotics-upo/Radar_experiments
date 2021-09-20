@@ -22,6 +22,8 @@
 #include <visualization_msgs/Marker.h>
 #include <fstream>
 
+#include <unordered_set>
+
 #include "dbscan/dbscan.h"
 #include "dbscan/dbscan_lines.h"
 
@@ -170,6 +172,14 @@ private:
             dbscan = new DBSCAN(5, 0.5, points);
         else
             dbscan = new DBSCANLines(5, 0.5, points);
+
+
+        int n_lines = -1;
+        auto db_line = dynamic_cast<DBSCANLines*>(dbscan);
+        if (db_line != NULL) {
+            n_lines = db_line->m_n_lines;
+        }
+
         bool use_dbscan = true;
         int n_clusters = dbscan->run();
         ROS_INFO("DBSCAN run. Points: %d. N clusters: %d", (int)points.size(), n_clusters);
@@ -177,14 +187,11 @@ private:
         // Publish marker
         fused_scan_marker_pub_.publish(pointsToMarker(dbscan->getPoints(), lidar_scan.header.frame_id));
 
-        for (cont = 0; cont < lidar_scan.ranges.size(); cont++) {
-            auto range = ret.ranges[cont];
+        std::unordered_set<int> blacklist;
 
+        for (cont = 0; cont < lidar_scan.ranges.size(); cont++) {
+            auto range = ret.ranges[cont]; // Get the RADAR range
             if (range < lidar_max_range_) {
-                if (fabs(lidar_scan.ranges[cont] - range) < d_f_ ) {
-                    range = fuseRanges(range, radarDev(), lidar_scan.ranges[cont], lidarDev(lidar_scan.ranges[cont]));
-                }
-                ret.ranges[cont] = range;
 
                 // Then add the lidar points that likely also are true: expand the radar measure to the closest cluster
                 int cluster = -3;
@@ -194,16 +201,37 @@ private:
                         cluster = p.clusterID;
                     }
                 }
+
+                if (fabs(lidar_scan.ranges[cont] - range) < d_f_ ) {
+                    // Point 1 of the paper
+                    range = fuseRanges(range, radarDev(), lidar_scan.ranges[cont], lidarDev(lidar_scan.ranges[cont]));
+                } else if (lidar_scan.ranges[cont] < range ) { 
+                    // Case 2: Add cluster to the blacklist
+                    if (cluster >= n_lines) {
+                        blacklist.insert(cluster);
+                        for (auto p:points) {
+                            if (p.clusterID == cluster && p.original_id != cont) {
+                                // Point 1 of the paper
+                                ret.ranges[p.original_id] = std::numeric_limits<float>::infinity();
+                            }
+                        }
+                    }
+                    continue;
+                }
+                ret.ranges[cont] = range;
                 
-                if (cluster >= 0) {
+                if (cluster >= 0 && blacklist.find(cluster) == blacklist.end()) {
                     for (auto p:points) {
                         if (p.clusterID == cluster && p.original_id != cont) {
+                            // Point 1 of the paper
                             ret.ranges[p.original_id] = lidar_scan.ranges[p.original_id];
                         }
                     }
                 }
 
             }
+
+            
         }
 
         for (auto p:ret.ranges) {
@@ -227,11 +255,6 @@ private:
         }
 
         int n_cluster = 0;
-        int n_lines = 100000;
-        auto db_line = dynamic_cast<DBSCANLines*>(dbscan);
-        if (db_line != NULL) {
-            n_lines = db_line->m_n_lines;
-        }
         for (auto p:points) {
             if (p.clusterID >= 0 && p.clusterID < n_lines) {
                 n_cluster++;
@@ -370,9 +393,10 @@ private:
 
 };
 
-std_msgs::ColorRGBA getColor(int i) {
+std_msgs::ColorRGBA getColor(int num) {
   // Different colors for planes
-  i = i % 6;
+  const int n_colors = 10;
+  int i = num % n_colors;
   std_msgs::ColorRGBA color;
   color.a = 1.0;
   switch (i) {
@@ -402,8 +426,37 @@ std_msgs::ColorRGBA getColor(int i) {
         color.g = 1.0;
         color.r = 1.0;
         break;
+
+      case 6:
+        color.g = 1.0;
+        color.b = 0.5;
+        color.r = 0.5;
+        break;
+
+      case 7:
+        color.r = 1.0;
+        color.b = 0.5;
+        color.g = 0.5;
+        break;
+      case 8:
+        color.b = 1.0;
+        color.g = 0.5;
+        color.r = 0.5;
+        break;
+
+      case 9:
+        color.g = 1.0;
+        color.b = 1.0;
+        color.r = 0.5;
+        break;
   }
 
+  i = num % (n_colors*2);
+  if (i >= n_colors) {
+      color.g *= 0.5;
+      color.b *= 0.5;
+      color.r *= 0.5;
+  }
 
   return color;
 }
