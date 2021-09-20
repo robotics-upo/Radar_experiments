@@ -1,4 +1,4 @@
-function stats=get_stats(data, dt)
+function [stats, hist_data]=get_stats(data, dt)
   max_time = 1e11;
   time_scale = 1e-9;
  
@@ -7,6 +7,7 @@ function stats=get_stats(data, dt)
     max_time = min([max_time, max_time_]);
     i;
   end
+  n_exp = length(data) #Number of experiments
   
   printf('Max time: %d\n', max_time)
   
@@ -40,8 +41,8 @@ function stats=get_stats(data, dt)
         eff++;      
         curr_data_vec(eff, 1 )=mean(curr_data(1,:));
         curr_data_vec(eff, 2 )=mean(curr_data(2,:));  
-        curr_data_vec(eff, 3 )=mean(curr_data(1,:));
-        curr_data_vec(eff, 4 )=mean(curr_data(2,:));  
+        curr_data_vec(eff, 3 )=mean(curr_data(3,:));
+        curr_data_vec(eff, 4 )=mean(curr_data(4,:));  
       end  
     end
     stats(k+1,1) = mean(curr_data_vec(:,1));
@@ -61,6 +62,11 @@ function stats=get_stats(data, dt)
       
     end
     stats(k+1,8) = n_success / length(data);
+    
+    %Get histogram:
+    hist_data=curr_data_vec(:,1:2); % Get the stats of the errors in the last set of measures
   end
+  
+  
   
 end

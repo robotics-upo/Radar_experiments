@@ -2,11 +2,11 @@ close all % Close all figures and start it over!
 
 % Parameters
 fontsize = 18;
-#experiment='_11_';   # or ...
+experiment='_12_';   # or ...
 #experiment = '_27_nov_13_';
-experiment = '_27_nov_12_47_';
+#experiment = '_27_nov_12_24_';
 n_max = 5;
-lw = 2;
+lw = 3;
 dt = 20;
 
 left = 0.15;
@@ -28,41 +28,45 @@ data_dbscan = load_data(1,n_max,strcat('stats_dbscan_lines',experiment));
 
 
 
-a = get_stats(data_dbscan, dt);
+[a,hist_a] = get_stats(data_dbscan, dt);
 plot(a(:,7), a(:,1), "linewidth", lw);
 data_lidar = load_data(1,n_max,strcat('stats_lidar',experiment));
-b = get_stats(data_lidar, dt);
+[b,hist_b] = get_stats(data_lidar, dt);
 hold on;
 plot(b(:,7), b(:,1),'g', "linewidth", lw);
 
 data_radar = load_data(1,n_max,strcat('stats_radar',experiment));
-c = get_stats(data_radar, dt);
+[c, hist_c] = get_stats(data_radar, dt);
 plot(c(:,7), c(:,1),'r', "linewidth", lw);
 
 data_cluster = load_data(1,n_max,strcat('stats_segmented',experiment));
-d = get_stats(data_cluster, dt);
+[d, hist_d] = get_stats(data_cluster, dt);
 plot(d(:,7), d(:,1),'k', "linewidth", lw);
 
+data_fritsche = load_data(1,n_max,strcat('stats_fritsche',experiment));
+[e, hist_e] = get_stats(data_fritsche, dt);
+plot(e(:,7), e(:,1),'m', "linewidth", lw);
 
 axis("labely");
 hy1 = ylabel("Position error (m)");
 set (hy1, "fontsize", fontsize) ;
 
-printf("Mean position errors: %f, %f, %f, %f\n", mean(a(:,1)), mean(b(:,1)), mean(c(:,1)),mean(d(:,1)))
+printf("Mean position errors: %f, %f, %f, %f, %f\n", mean(a(:,1)), mean(b(:,1)), mean(c(:,1)),mean(d(:,1)), mean(e(:,1)))
 
 %figure(2)
 pos = 2*(v_size + mini_margin) + margin;
 hax2 = subplot ("position", [left pos width v_size]);
-plot(a(:,7), a(:,2),'b', "linewidth", lw);
+plot(a(:,7), a(:,2),'b', "linewidth", lw); % Fusion --> blue
 hold on;
-plot(b(:,7), b(:,2),'g', "linewidth", lw);
-plot(c(:,7), c(:,2),'r', "linewidth", lw);
-plot(d(:,7), d(:,2),'k', "linewidth", lw);
+plot(b(:,7), b(:,2),'g', "linewidth", lw); % LiDAR --> green
+plot(c(:,7), c(:,2),'r', "linewidth", lw); % RADAR --> red
+plot(d(:,7), d(:,2),'k', "linewidth", lw); % Cluster --> black
+plot(e(:,7), e(:,2),'m', "linewidth", lw); % Fritsche --> magenta
 axis("labely");
 hy2 = ylabel("Orientation error (rad)");
 set (hy2, "fontsize", fontsize);
 
-printf("Mean orientation errors: %f, %f, %f, %f\n", mean(a(:,2)), mean(b(:,2)), mean(c(:,2)), mean(d(:,2)))
+printf("Mean orientation errors: %f, %f, %f, %f, %f\n", mean(a(:,2)), mean(b(:,2)), mean(c(:,2)), mean(d(:,2)), mean(e(:,2)))
 
 % Plot uncertainty AMCL dist
 pos = 1*(v_size + mini_margin) + margin;
@@ -72,11 +76,12 @@ hold on;
 plot(b(:,7), b(:,3),'g', "linewidth", lw);
 plot(c(:,7), c(:,3),'r', "linewidth", lw);
 plot(d(:,7), d(:,3),'k', "linewidth", lw);
+plot(e(:,7), e(:,3),'m', "linewidth", lw);
 axis("labely");
 hy3 = ylabel("AMCL uncert. (m)");
 set (hy3, "fontsize", fontsize);
 
-printf("Mean AMCL uncertainty: %f, %f, %f, %f\n", mean(a(:,3)), mean(b(:,3)), mean(c(:,3)), mean(d(:,3)));
+printf("Mean AMCL uncertainty: %f, %f, %f, %f, %f\n", mean(a(:,3)), mean(b(:,3)), mean(c(:,3)), mean(d(:,3)), mean(e(:,3)));
 
 hax4 = subplot ("position", [left margin width v_size]);
 plot(a(:,7), a(:,4),'b', "linewidth", lw);
@@ -84,26 +89,42 @@ hold on;
 plot(b(:,7), b(:,4),'g', "linewidth", lw);
 plot(c(:,7), c(:,4),'r', "linewidth", lw);
 plot(d(:,7), d(:,4),'k', "linewidth", lw);
+plot(e(:,7), e(:,4),'m', "linewidth", lw);
 hx1 = xlabel ("Time (s)");
-set (hx1, "fontsize", fontsize) 
-hy4 = ylabel("AMCL uncert. (rad)")
+set (hx1, "fontsize", fontsize) ;
+hy4 = ylabel("AMCL uncert. (rad)");
 linkaxes ([hax1, hax2, hax3, hax4],"x");
-set (hy4, "fontsize", fontsize) 
+set (hy4, "fontsize", fontsize);
 set(hax4, "fontsize", fontsize, "linewidth", 2);
 set(hax3, "fontsize", fontsize, "linewidth", 2);
 set(hax2, "fontsize", fontsize, "linewidth", 2);
 set(hax1, "fontsize", fontsize, "linewidth", 2);
 
-printf("Mean AMCL uncertainty: %f, %f, %f, %f\n", mean(a(:,4)), mean(b(:,4)), mean(c(:,4)), mean(d(:,4)))
+printf("Mean AMCL uncertainty: %f, %f, %f, %f, %f\n", mean(a(:,4)), mean(b(:,4)), mean(c(:,4)), mean(d(:,4)), mean(e(:,4)))
 
-printf("Success rate a: ")
-a(:,8)'
-printf("Success rate b: ") 
-b(:,8)'
-printf("Success rate c: ") 
-c(:,8)'
-printf("Success rate d: ") 
-d(:,8)'
+%printf("Success rate a: ")
+%a(:,8)'
+%printf("Success rate b: ") 
+%b(:,8)'
+%printf("Success rate c: ") 
+%c(:,8)'
+%printf("Success rate d: ") 
+%d(:,8)'
 
-printf("End\n")
+%printf("End\n")
 
+
+
+# Histogram of the final position/orientation errors:
+
+hist_dist(:,5) = hist_a(:,1);
+hist_dist(:,1) = hist_b(:,1);
+hist_dist(:,2) = hist_c(:,1);
+hist_dist(:,3) = hist_d(:,1);
+hist_dist(:,4) = hist_e(:,1);
+
+figure(2)
+hist(hist_dist);
+figure(3)
+pkg load statistics
+boxplot(hist_dist, "line_width", 2)

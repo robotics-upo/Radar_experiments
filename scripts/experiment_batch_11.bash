@@ -12,6 +12,7 @@ until [ $CONTADOR -gt $2 ]; do
   roslaunch radar_experiments localize_with_gt.launch gt_filename:=stats_dbscan_lines_11_$CONTADOR.txt localize_method:=fusion bag_name:=$BAG initial_pose_x:=$X initial_pose_y:=$Y initial_pose_a:=$A
   roslaunch radar_experiments localize_with_gt.launch gt_filename:=stats_lidar_11_$CONTADOR.txt localize_method:=lidar bag_name:=2020-12-01-11-36-21_refined.bag initial_pose_x:=$X initial_pose_y:=$Y initial_pose_a:=$A scan_topic:=/lidar_scan 
   roslaunch radar_experiments localize_with_gt.launch gt_filename:=stats_radar_11_$CONTADOR.txt localize_method:=radar bag_name:=2020-12-01-11-36-21_refined.bag initial_pose_x:=$X initial_pose_y:=$Y initial_pose_a:=$A scan_topic:=/radar_scan 
+  roslaunch radar_experiments localize_with_gt_fritsche.launch gt_filename:=stats_fritsche2_11_$CONTADOR.txt bag_name:=$BAG initial_pose_x:=$X initial_pose_y:=$Y initial_pose_a:=$A range_filename:=radar_stats_fritsche_11.m
 
   let CONTADOR+=1
 done

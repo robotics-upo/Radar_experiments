@@ -4,7 +4,7 @@
 
     <arg name="launch_static_tf"       default="true"/>
     <arg name="sec"                    default="10"/>
-    <arg name="rate"                   default="4"/>
+    <arg name="rate"                   default="1.1"/>
     <arg name="bag_name"               default="2020-12-01-12-04-38_odom_gt.bag"/>
     <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name)"/>
     <arg name="use_tf_bag" default="false" />
@@ -20,40 +20,86 @@
         <param name="/bot/base_width" value="0.65"/>
     </node>
 
-    <!-- Depending on the localization method, start fusion or just remap scans-->
-    <arg name="localization_method" default="fusion"/>
-    
-    <!-- Fusion -->
-    <!-- <arg name="scan_topic" default="/lidar_radar_fusion_node/result_laser_scan" if="$(eval arg('localization_method')=='fusion')"/>
-    <include file="$(dirname)/fuse_radar_lidar.launch" if="$(eval localization_method=='fusion')"/>   -->
-
-    <arg name="scan_topic" default="/dbscan_fuser/fused_scan" if="$(eval arg('localization_method')=='fusion')"/>
-    <arg name="scan_topic" default="/dbscan_fuser/fused_scan" if="$(eval arg('localization_method')=='dbscan')"/>
-    <arg name="scan_topic" default="/dbscan_fuser/fused_scan" if="$(eval arg('localization_method')=='dbscan_lines')"/>
-    <arg name="scan_topic" default="/dbscan_fuser/segmented_scan" if="$(eval arg('localization_method')=='segmented')"/>
-
-    <node name="dbscan_fuser" pkg="radar_experiments" type="lidar_radar_dbscan" output="screen" >
-        <!-- <remap from="/lidar_scan" to="os1_cloud_node/scan"/> -->
-        <param name="use_dbscan_lines" value="false" if="$(eval arg('localization_method')=='dbscan')"/>
-        <param name="use_dbscan_lines" value="true" if="$(eval arg('localization_method')=='dbscan_lines')"/>
-        <param name="yaw_tolerance" value="0.13"/>
-    </node>
-
+   
     <!-- Radar -->
     <include file="$(dirname)/concatenator.launch"/> 
-    <arg name="scan_topic" default="/radar_scan" if="$(eval localization_method=='radar')"/>
     
-    <arg name="max_height" default="0.2"/>
-    <arg name="min_height" default="-0.1"/>
-    <arg name="angle_increment" default="0.01"/>
-    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan_radar">
-        <remap from="cloud_in"            to="/radarConcatenatedCloud"/>
-        <remap from="scan"                to="/radar_scan"/>
-        <param name="min_height"          value="$(arg min_height)"/>
-        <param name="max_height"          value="$(arg max_height)"/>
+
+    <!-- Sync policy param -->
+    <arg name="sychronization_margin"             default="10"/>
+    <arg name="time_tolerance"                    default="0.3"/>
+
+    <!-- Virtual 2D Scan extraction Config -->
+    <arg name="yaw_tolerance"                     default="0.08"/>
+
+    <!-- RANSAC Config -->
+        <!-- Lidar -->
+    <arg name="lidar_ransac_distance_threshold"         default="0.04"/>
+    <arg name="lidar_ransac_iterations"                 default="0"/>
+    <arg name="lidar_min_ransac_pointcloud_size"        default="50"/>
+        <!-- Radar -->
+    <arg name="radar_ransac_distance_threshold"         default="0.05"/>
+    <arg name="radar_ransac_iterations"                 default="5"/> <!-- Set to 0 to disable-->
+    <arg name="radar_min_ransac_pointcloud_size"        default="40"/>
+
+    <!-- Third step -->
+    <arg name="beta"                                    default="0.5"/> <!-- According to paper, beta varies between 0 and 1 -->
+    <arg name="distance_threshold"                      default="0.1"/> <!-- Parameter dF of the paper -->
+
+    <!-- Radar and Lidar standard deviations -->
+    <arg name="radar_dev"                               default="0.1"/> 
+    <arg name="lidar_dev"                               default="0.1"/> 
+    <arg name="lidar_max_range"                         default="120.0"/> <!-- Useful when lidar pointclouds publishes ranges with Inf values. Ouster lidar I think does not do-->
+
+    <arg name="enable_radar_enhancement"                default="false"/>
+    <arg name="fuse_only_enhaced_radar"                 default="false"/> 
+    <arg name="max_radar_acc_yaw_incr"                  default="0.4"/> 
+    <arg name="max_radar_acc_time"                      default="0.5"/> 
+
+    <!-- Radar Points inflation using angular resolutions -->
+    <arg name="inflate_radar_points_with_resolution"    default="true"/>
+    <arg name="angular_resolution_yaw"                  default="8.0"/>
+    <arg name="angular_resolution_azimuth"              default="1.0"/>
+    <arg name="point_step"                              default="0.08"/>
+    <arg name="radar_full_cloud_topic_name" default="radarConcatenatedCloud"/>
+
+
+
+    <node name="lidar_radar_fusion_node" type="lidar_radar_fusion_node" pkg="radar_experiments" > 
+        <remap from="lidar_points"                           to="/os1_cloud_node/points_non_dense"/>
+        <remap from="radar_points"                           to="/$(arg radar_full_cloud_topic_name)"/>
+        <param name="yaw_tolerance"                          value="$(arg yaw_tolerance)"/>
+        <param name="lidar_ransac_distance_threshold"        value="$(arg lidar_ransac_distance_threshold)"/>
+        <param name="lidar_ransac_iterations"                value="$(arg lidar_ransac_iterations)"/>
+        <param name="lidar_min_ransac_pointcloud_size"       value="$(arg lidar_min_ransac_pointcloud_size)"/>
+        <param name="radar_ransac_distance_threshold"        value="$(arg radar_ransac_distance_threshold)"/>
+        <param name="radar_ransac_iterations"                value="$(arg radar_ransac_iterations)"/>
+        <param name="radar_min_ransac_pointcloud_size"       value="$(arg radar_min_ransac_pointcloud_size)"/>
+        <param name="beta"                                   value="$(arg beta)"/>
+        <param name="distance_threshold"                     value="$(arg distance_threshold)"/>
+        <param name="sychronization_margin"                  value="$(arg sychronization_margin)"/>
+        <param name="time_tolerance"                         value="$(arg time_tolerance)"/>
+        <param name="radar_dev"                              value="$(arg radar_dev)"/>
+        <param name="enable_radar_enhancement"               value="$(arg enable_radar_enhancement)"/>
+        <param name="fuse_only_enhaced_radar"                value="$(arg fuse_only_enhaced_radar)"/>
+        <param name="max_radar_acc_yaw_incr"                 value="$(arg max_radar_acc_yaw_incr)"/>
+        <param name="max_radar_acc_time"                     value="$(arg max_radar_acc_time)"/>
+        <param name="inflate_radar_points_with_resolution"   value="$(arg inflate_radar_points_with_resolution)"/>
+        <param name="angular_resolution_yaw"                 value="$(arg angular_resolution_yaw)"/>
+        <param name="angular_resolution_azimuth"             value="$(arg angular_resolution_azimuth)"/>
+        <param name="point_step"                             value="$(arg point_step)"/>
+    </node>
+    
+    <arg name="scan_topic" default="/lidar_radar_fusion_node/result_laser_scan"/>
+    
+    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
+        <remap from="cloud_in"            to="/lidar_radar_fusion_node/final_result_cloud"/>
+        <remap from="scan"                to="$(arg scan_topic)"/>
+        <param name="min_height"          value="-1.0"/>
+        <param name="max_height"          value="1.0"/>
         <param name="angle_min"           value="$(eval -1*arg('pi'))"/>
         <param name="angle_max"           value="$(eval arg('pi'))"/>
-        <param name="angle_increment"     value="$(arg angle_increment)"/>
+        <!-- <param name="angle_increment"     value="$(arg"/> -->
         <param name="queue_size"          value="1"/>
         <param name="scan_time"           value="0.1"/>
         <param name="range_min"           value="0.5"/>
@@ -61,38 +107,11 @@
         <param name="target_frame"        value="os1_lidar"/>
         <param name="transform_tolerance" value="0.5"/>
     </node>
-
-    <!-- Lidar -->
-    <arg name="scan_topic" default="/lidar_scan" if="$(eval localization_method=='lidar')"/>
-    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan_lidar" >
-        <remap from="cloud_in"            to="/os1_cloud_node/points_non_dense"/>
-        <remap from="scan"                to="/lidar_scan"/>
-        <param name="min_height"          value="$(arg min_height)"/>
-        <param name="max_height"          value="$(arg max_height)"/>
-        <param name="angle_min"           value="$(eval -1*arg('pi'))"/>
-        <param name="angle_max"           value="$(eval arg('pi'))"/>
-        <param name="angle_increment"     value="$(arg angle_increment)"/>
-        <param name="queue_size"          value="1"/>
-        <param name="scan_time"           value="0.1"/>
-        <param name="range_min"           value="0.5"/>
-        <param name="range_max"           value="120"/>
-        <param name="target_frame"        value="os1_lidar"/>
-        <param name="transform_tolerance" value="0.5"/>
-    </node>
-
-   
 
     <!-- Odometry stuff -->
     <arg name="calculate_odom" default="false"/>
     <arg name="use_imu" default="false"/>
-    <!-- Odometry ticks pure. This node susbcribes to /idmind_motors/wheel_odom and publishes /odom topic and tf from odom to base link without reading imu -->
-    <node pkg="idmind_navigation" type="odometry_node.py" name="odometry_node_ticks" if="$(eval use_imu==False and calculate_odom == True )">
-        <param name="/bot/base_width" value="0.65"/>
-    </node>
-    <node pkg="radar_experiments" type="upo_odometry.py" name="odometry_node_imu" if="$(eval use_imu == True and calculate_odom == True)">
-        <param name="use_imu" value="2"/>
-    </node>
-
+    
 
     <!-- MCL 2D Stuff & Map server -->
     <arg name="map2d_name"     default="tunel2d_map4"/>
@@ -201,9 +220,8 @@
     <arg name="gt_filename" default="stats_gt_saver.txt"/>
     <node name="gt_saver" pkg="radar_experiments" type="calculate_ground_truth.py" >
         <remap from="pose" to="/ground_truth"/>
-        <!-- <remap from="pose" to="/fiducial_pose"/> -->
         <param name="filename" value="$(find radar_experiments)/stats/$(arg gt_filename)"/>
-    </node>
+    </node> 
 
     <node name="initial_pose_publisher" pkg="radar_experiments" type="initial_pose_publisher.py" output="screen">
         <remap from="pose" to="/ground_truth"/>
@@ -215,5 +233,10 @@
         <arg name="read_only_map" value="true"/>
         <arg name="publish_tf" value="false"/>
     </include>
+
+    <arg name="range_filename" default="radar_fritsche_stats.m"/>
+    <node name="stats" pkg="radar_experiments" type="radar_stats.py" output="screen">
+        <param name="filename" value="$(arg range_filename)"/>
+    </node>
 
 </launch>
