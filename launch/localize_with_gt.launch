@@ -5,7 +5,7 @@
     <arg name="launch_static_tf"       default="true"/>
     <arg name="sec"                    default="10"/>
     <arg name="rate"                   default="4"/>
-    <arg name="bag_name"               default="2020-12-01-12-04-38_odom_gt_fusion.bag"/>
+    <arg name="bag_name"               default="2020-12-01-12-04-38_odom_gt.bag"/>
     <arg name="bag_file"               default="$(env HOME)/radar_fusion_bags/$(arg bag_name)"/>
     <arg name="use_tf_bag" default="false" />
     
@@ -30,6 +30,7 @@
     <arg name="scan_topic" default="/dbscan_fuser/fused_scan" if="$(eval arg('localization_method')=='fusion')"/>
     <arg name="scan_topic" default="/dbscan_fuser/fused_scan" if="$(eval arg('localization_method')=='dbscan')"/>
     <arg name="scan_topic" default="/dbscan_fuser/fused_scan" if="$(eval arg('localization_method')=='dbscan_lines')"/>
+    <arg name="scan_topic" default="/dbscan_fuser/segmented_scan" if="$(eval arg('localization_method')=='segmented')"/>
 
     <node name="dbscan_fuser" pkg="radar_experiments" type="lidar_radar_dbscan" output="screen" >
         <!-- <remap from="/lidar_scan" to="os1_cloud_node/scan"/> -->
