@@ -6,8 +6,6 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
 #include <pcl/point_types.h>
-#include <pcl/sample_consensus/ransac.h>
-#include <pcl/sample_consensus/sac_model_line.h>
 #include <pcl/filters/extract_indices.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/LaserScan.h>
@@ -30,7 +28,7 @@
 #include "math_utils.hpp"
 
 std_msgs::ColorRGBA getColor(int i);
-
+std_msgs::ColorRGBA getGray(int num);
 class LidarRadarFuser
 {
     using DoublePair = std::pair<double, double>;
@@ -53,9 +51,6 @@ public:
         //Params....
         pnh_.param("yaw_tolerance", yaw_tolerance_, 0.1);
 
-        pnh_.param("beta", beta_, 0.2);
-        if(beta_ < 0.0 || beta_ > 1.0) beta_ = 0.2; //Default in case you try to set a bad value
-
         pnh_.param("distance_threshold", d_f_, 0.3);
         if(d_f_ < 0.0 ) d_f_ *= -1;
 
@@ -72,11 +67,15 @@ public:
         pnh_.param("odom_frame_id", odom_frame_id_, (std::string)"odom");
         pnh_.param("robot_base_frame_id", robot_base_frame_id_, (std::string)"base_link");
 
+        // DBScan Lines params
+        pnh_.param("min_points", min_points_, 20);
+        pnh_.param("gamma", gamma_, 0.1);
+        pnh_.param("theta", theta_, 0.15);
+
         std::cout << "\033[1;31m\n---------------------------------------------\033[0m" << std::endl
                   << "Lidar - Radar Scans Fuser Params:    " <<std::endl << std::endl
                   << "\tSynchronization Margin:            " << synch_margin_queue_ << std::endl
                   << "\tYaw Tolerance (rad):               " << yaw_tolerance_  << std::endl
-                  << "\tBeta:                              " << beta_ << std::endl
                   << "\tDistance Threshold (d_F):          " << d_f_ << std::endl
                   << "\tTime Tolerance (s):                " << time_tolerance_ << std::endl
                   << "\tLidar Std Dev (m):                 " << lidar_dev_ << std::endl
@@ -169,10 +168,16 @@ private:
         DBSCAN *dbscan;
 
         if (!m_use_dbscan_lines)
-            dbscan = new DBSCAN(5, 0.5, points);
+            dbscan = new DBSCAN(min_points_, d_f_, points);
         else
-            dbscan = new DBSCANLines(5, 0.5, points);
+            dbscan = new DBSCANLines(min_points_, d_f_, points, gamma_, theta_);
 
+
+        
+
+        bool use_dbscan = true;
+        int n_clusters = dbscan->run();
+        
 
         int n_lines = -1;
         auto db_line = dynamic_cast<DBSCANLines*>(dbscan);
@@ -180,12 +185,10 @@ private:
             n_lines = db_line->m_n_lines;
         }
 
-        bool use_dbscan = true;
-        int n_clusters = dbscan->run();
-        ROS_INFO("DBSCAN run. Points: %d. N clusters: %d", (int)points.size(), n_clusters);
+        ROS_INFO("DBSCAN run. Points: %d. N clusters: %d. N Lines: %d", (int)points.size(), n_clusters, n_lines);
 
         // Publish marker
-        fused_scan_marker_pub_.publish(pointsToMarker(dbscan->getPoints(), lidar_scan.header.frame_id));
+        fused_scan_marker_pub_.publish(pointsToMarker(dbscan->getPoints(), lidar_scan.header.frame_id, n_lines));
 
         std::unordered_set<int> blacklist;
 
@@ -302,7 +305,7 @@ private:
         return r_radar + pow(radar_dev,2) / (pow(lidar_dev,2) + pow(radar_dev, 2)) * (r_lidar - r_radar);
     }
 
-    visualization_msgs::Marker pointsToMarker(const std::vector<Point> points, const std::string frame_id){
+    visualization_msgs::Marker pointsToMarker(const std::vector<Point> points, const std::string frame_id, int n_lines = -1){
         visualization_msgs::Marker _marker;
         _marker.header.frame_id = frame_id;
         _marker.header.stamp = ros::Time::now();
@@ -335,7 +338,10 @@ private:
             gp.y = p.y;
             gp.z = p.z;
             _marker.points.push_back(gp);
-            _marker.colors.push_back(getColor(p.clusterID));
+            if(p.clusterID < n_lines)
+                _marker.colors.push_back(getColor(p.clusterID));
+            else
+                _marker.colors.push_back(getGray(p.clusterID));
         }
 
         return _marker;
@@ -374,13 +380,8 @@ private:
                            // difference less than yaw_tolerance, we assume that they lie on the same
                            // vertical linea
 
-    double ransac_distance_threshold_lidar_, ransac_distance_threshold_radar_;
-    int ransac_iterations_lidar_, ransac_iterations_radar_;
-    int min_ransac_pointcloud_size_lidar_,min_ransac_pointcloud_size_radar_;
-
-    double beta_;
-    double d_f_;
-
+    int min_points_;
+    double d_f_, theta_, gamma_;
     double lidar_max_range_;
 
     
@@ -393,11 +394,30 @@ private:
 
 };
 
+std_msgs::ColorRGBA getGray(int num) {
+
+
+
+  int i = num % 5;
+  std_msgs::ColorRGBA color;
+  color.a = 1.0;
+  color.b = color.r = color.g = i*0.15 + 0.2;
+
+  if (num < 0)
+    color.r = color.b = color.g = 1.0;
+
+  return color;
+}
+
 std_msgs::ColorRGBA getColor(int num) {
+  
   // Different colors for planes
   const int n_colors = 10;
   int i = num % n_colors;
   std_msgs::ColorRGBA color;
+
+    
+
   color.a = 1.0;
   switch (i) {
       case 0:
@@ -457,6 +477,9 @@ std_msgs::ColorRGBA getColor(int num) {
       color.b *= 0.5;
       color.r *= 0.5;
   }
+
+  if (num < 0)
+    color.r = color.b = color.g = 1.0;
 
   return color;
 }
