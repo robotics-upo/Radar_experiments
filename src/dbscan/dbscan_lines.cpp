@@ -4,9 +4,9 @@ using namespace std;
 default_random_engine DBSCANLines::m_generator;
 
 DBSCANLines::DBSCANLines(unsigned int minPts, float eps, std::vector<Point> &points, double gamma, double theta):DBSCAN(minPts, eps, points)  {
-    printf("Points: %d\n", (int)m_points.size());
     m_gamma = gamma; 
     m_theta = theta;
+
 }
 
 int DBSCANLines::run()
@@ -16,7 +16,6 @@ int DBSCANLines::run()
     
     // First try to detect lines
     m_available_points = m_points.size();
-    printf("DBSCANLines::run() --> avaliable points: %d\n", m_available_points);
     while (m_available_points > 0)
     {
         int p = getRandomPoint();
@@ -86,8 +85,15 @@ int DBSCANLines::run()
       // The queue has been emptied --> clear possible QUEUE status and add the region to the detected planes if condition of step 12 (Algorithm 1)
       if (m_curr_line.n_points > m_minPoints) {
         m_curr_line.makeDPositive();
-         std::cout << "Detected line: " << m_curr_line.toString() << std::endl;
+        //  std::cout << "Detected line: " << m_curr_line.toString() << std::endl;
         m_detected_lines.push_back(m_curr_line);
+      } else {
+        for (int i = 0; i < m_points.size(); i++) {
+          if (m_points[i].clusterID == region_id) {
+            m_points[i].clusterID = FAILURE;
+          }
+        }
+        return FAILURE;
       }
     } else {
       // No nearest neighbor available --> discard (to R_PRIMA)
