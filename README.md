@@ -6,7 +6,7 @@ D. Alejo, R. Rey, J. A. Cobano, F. Caballero and L. Merino, "Data  fusion  of  l
 
 The dataset used in this paper can be downloaded at:
 
-[Dataset web page](https://www.dropbox.com/sh/kt2q8ulnx4171dk/AACkiA1Xx5g9ah2zWdHbek7Fa?dl=0)
+[Dataset web page](https://robotics.upo.es/datasets/smoke)
 
 [DropBox MultiRadar Bag Folder](https://www.dropbox.com/sh/k868avekgrstwzs/AADj7J1sI7gRccPbI_15fMdOa?dl=0)
 
@@ -32,7 +32,7 @@ It will run the fusion node and launch a rviz visualization window where you can
 
 ### Parameters for the implementation of P. Fritsche & B. Wagner 2017 "Modeling structure and aerosol concentration with fused radar and LiDAR data in environments with changing visibility" (IROS 2017)
 
-Related to the algorithms:
+Related to the algorithm:
 
 - yaw_tolerance : Used to extract 2d virtual scans
 - ransac_distance_threshold (for both lidar and radar)
