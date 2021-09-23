@@ -1,4 +1,8 @@
 .vscode/
 *.bag
-stats/*
+stats/s*
+stats/f*
+stats/*.m
+stats/*ps
+stats/*.png
 *.grid
