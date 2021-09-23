@@ -33,7 +33,7 @@ class LidarRadarFuser
 {
     using DoublePair = std::pair<double, double>;
 public:
-    LidarRadarFuser(): spinner(2), laser_scans_subs_sync_(NULL), radar_data_file_("radar_stats.m", std::ios::out)
+    LidarRadarFuser(): spinner(2), laser_scans_subs_sync_(NULL), radar_data_file_(NULL)
     {
         //Lidar and Radar pointcloud sync subscriber
         pnh_.param("sychronization_margin", synch_margin_queue_,10);
@@ -84,11 +84,18 @@ public:
                   << "\tOdom Frame ID:                     " << odom_frame_id_ << std::endl
                   << "\033[1;31m---------------------------------------------\033[0m" << std::endl;
         
+        // Points stats filename
+        std::string points_stats_filename="radar_stats.m";
+        if (pnh_.hasParam("points_stats_filename")) {
+            pnh_.getParam("points_stats_filename", points_stats_filename);
+        }
+        radar_data_file_ = new std::ofstream(points_stats_filename.c_str(), std::ios::out);
     }
     ~LidarRadarFuser(){
         if(save_radar_data_){
-            std::cout << "Closing file" << std::endl;
-            radar_data_file_.close();
+            std::cout << "Closing points stats file" << std::endl;
+            radar_data_file_->close();
+            delete radar_data_file_;
         }
     }
     void run()
@@ -264,8 +271,8 @@ private:
             }
         }
 
-        radar_data_file_ << radar_scan.header.stamp << "\t";
-        radar_data_file_ << n_lidar << " " << n_radar << "\t" << fused_cont << "\t" << n_cluster << "\n";
+        *radar_data_file_ << radar_scan.header.stamp << "\t";
+        *radar_data_file_ << n_lidar << " " << n_radar << "\t" << fused_cont << "\t" << n_cluster << "\n";
 
         std::cout <<" Radar scan points: " << n_radar
                   <<" Lidar scan points: " << n_lidar
@@ -386,7 +393,7 @@ private:
 
     
 
-    std::ofstream radar_data_file_;
+    std::ofstream *radar_data_file_;
     bool save_radar_data_{false};
     bool m_use_dbscan_lines;
 
