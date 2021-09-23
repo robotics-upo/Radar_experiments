@@ -32,11 +32,14 @@
     <arg name="scan_topic" default="/dbscan_fuser/fused_scan" if="$(eval arg('localization_method')=='dbscan_lines')"/>
     <arg name="scan_topic" default="/dbscan_fuser/segmented_scan" if="$(eval arg('localization_method')=='segmented')"/>
 
+    <arg name="points_stats_filename" default="points.m"/>
+
     <node name="dbscan_fuser" pkg="radar_experiments" type="lidar_radar_dbscan" output="screen" >
         <!-- <remap from="/lidar_scan" to="os1_cloud_node/scan"/> -->
         <param name="use_dbscan_lines" value="false" if="$(eval arg('localization_method')=='dbscan')"/>
         <param name="use_dbscan_lines" value="true" if="$(eval arg('localization_method')=='dbscan_lines')"/>
         <param name="yaw_tolerance" value="0.13"/>
+        <param name="points_stats_filename" value="$(find radar_experiments)/stats/$(arg points_stats_filename)"/>
     </node>
 
     <!-- Radar -->

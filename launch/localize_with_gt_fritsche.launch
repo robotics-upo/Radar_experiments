@@ -236,7 +236,7 @@
 
     <arg name="range_filename" default="radar_fritsche_stats.m"/>
     <node name="stats" pkg="radar_experiments" type="radar_stats.py" output="screen">
-        <param name="filename" value="$(arg range_filename)"/>
+        <param name="filename" value="$(find radar_experiments)/stats/$(arg range_filename)"/>
     </node>
 
 </launch>
