@@ -4,15 +4,15 @@ This repository contains the source code and additional configuration files to r
 
 D. Alejo, R. Rey, J. A. Cobano, F. Caballero and L. Merino, "Data  fusion  of  low-cost  RADAR  and  LIDAR  for  reliable  ground  robotlocalization  under  low-visibility  conditions"
 
+In this paper, we have designed and implemented a new method for fusing radar and lidar information. The method has been implemented mainly in the source file: src/sensor_fusion/lidar_radar_fusion_dbscan.cpp
+
 The dataset used in this paper can be downloaded at:
 
 [Dataset web page](https://robotics.upo.es/datasets/smoke)
 
-[DropBox MultiRadar Bag Folder](https://www.dropbox.com/sh/k868avekgrstwzs/AADj7J1sI7gRccPbI_15fMdOa?dl=0)
-
-By **default** the launch ```make_aruco_map.launch``` is configured to avoid using the /tf and /tf_static topics in the case they are present on the bag file. So if you need to use these topics because some reasons, just run the launch file with the arg *use_bag_tf* set to true.
-
 ## Dependencies
+
+The utilities of this repository have been programmed on a Linux 18.04 distribution and ROS melodic. They have also been tested in Ubuntu 20.04 and ROS noetic. Please refer to the [ROS wiki](https://wiki.ros.org/ROS/Installation) for details on installation and the creation of a catkin workspace.
     
 - Cloud concatenator: https://github.com/robotics-upo/cloud_concatenator
 - pcl_ros: ```sudo apt install ros-$ROS_DISTRO-pcl-ros```
@@ -20,9 +20,9 @@ By **default** the launch ```make_aruco_map.launch``` is configured to avoid usi
 - raposa_marker: https://github.com/robotics-upo/upo_markers
 - odom_to_tf:  https://github.com/robotics-upo/odom_to_tf
 
-You can downlaod the repository and execute ```./scripts/install_fusion_dependencies.sh``` from the source directory of a catkin workspace. It will install APT packages and downlaod necessary repos to avoid doing it manually. In addition it asks you if you want to download the dataset.
+You can download the repository and execute ```./scripts/install_fusion_dependencies.sh``` from the source directory of a catkin workspace. It will install APT packages and download the necessary repos to avoid doing it manually. In addition it asks you if you want to download the dataset.
 
-Once you download our dataset into your home folder, you can launch the main an experiment as follows:
+Once you download our dataset into your home folder into the folder "radar_fusion_bags", you can launch the main an experiment as follows:
 
 ```
 roslaunch radar_experiments localize_with_gt.launch gt_filename:=stats_radar.txt localize_method:=fusion
