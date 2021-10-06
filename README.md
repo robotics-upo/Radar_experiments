@@ -22,7 +22,7 @@ The utilities of this repository have been programmed on a Linux 18.04 distribut
 
 You can download the repository and execute ```./scripts/install_fusion_dependencies.sh``` from the source directory of a catkin workspace. It will install APT packages and download the necessary repos to avoid doing it manually. In addition it asks you if you want to download the dataset.
 
-Once you download our dataset into your home folder into the folder "radar_fusion_bags", you can launch the experiment batch presented in the ICRA paper as follows (for ten repetitions):
+Once you download our dataset into the folder "${HOME}/radar_fusion_bags", you can launch the experiment batch presented in the ICRA paper as follows (for ten repetitions):
 
 ```
 rosrun radar_experiments experiment_batch.sh 1 10
