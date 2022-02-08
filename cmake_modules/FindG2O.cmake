@@ -5,9 +5,11 @@
 # G2O_FOUND, if false, do not try to link against g2o
 # G2O_LIBRARIES, path to the libg2o
 # G2O_INCLUDE_DIR, where to find the g2o header files
+# G2O_INCLUDE_DIRS, where to find the g2o internal and EXTERNAL header files
 #
 # Niko Suenderhauf <niko@etit.tu-chemnitz.de>
 # Adapted by Felix Endres <endres@informatik.uni-freiburg.de>
+# Adapted by David Alejo <daletei@upo.es>
 
 IF(UNIX)
 
@@ -22,11 +24,13 @@ IF(UNIX)
     PATHS /usr/local /usr
     PATH_SUFFIXES include/g2o include)
 
-  IF (G2O_INCLUDE_DIR)
-    MESSAGE(STATUS "Found g2o headers in: ${G2O_INCLUDE_DIR}")
+    IF (G2O_INCLUDE_DIR)
+    set(G2O_INCLUDE_DIR_EXTERNAL ${G2O_INCLUDE_DIR}/EXTERNAL)
+    set(G2O_INCLUDE_DIRS ${G2O_INCLUDE_DIR} ${G2O_INCLUDE_DIR_EXTERNAL})
+    MESSAGE(STATUS "Found g2o headers in: ${G2O_INCLUDE_DIRS}")
   ENDIF (G2O_INCLUDE_DIR)
 
-  FIND_LIBRARY(G2O_CORE_LIB             
+    FIND_LIBRARY(G2O_CORE_LIB             
     NAMES g2o_core g2o_core_rd
     PATHS /usr/local /usr ${CMAKE_PREFIX_PATH}
     PATH_SUFFIXES lib)
@@ -92,5 +96,9 @@ IF(UNIX)
       ENDIF(G2O_FIND_REQUIRED)
     ENDIF(NOT G2O_INCLUDE_DIR)
   ENDIF(G2O_LIBRARIES AND G2O_INCLUDE_DIR)
+
+
+  
+  add_compile_definitions(G2O_USE_VENDORED_CERES) ## Using provided ceres
 
 ENDIF(UNIX)
