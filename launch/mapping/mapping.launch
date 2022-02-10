@@ -1,0 +1,27 @@
+<launch>
+
+  <arg name="pi"	default="3.141592"/>
+  <arg name="pi/2"	default="1.57"/>
+
+  <arg name="simulation" default="false"/>
+  <arg name="resolution_octomap" default="0.05"/>
+
+  <arg name="camera_height" default="0.4"/>
+
+  <node pkg="tf2_ros" type="static_transform_publisher" name="ground_broadcaster" args="0 0 $(arg camera_height) 0 0 0 ground camera_init"/> 
+  <node pkg="tf2_ros" type="static_transform_publisher" name="mapping_base_link_aft" args="0 0 -$(arg camera_height) -$(arg pi/2) 0 0 aft_mapped base_link" required="true"/>    
+  <node pkg="tf2_ros" type="static_transform_publisher" name="mapping_ground" args="0 0 0 0 0 0 ground map"/>     
+  
+  <arg name="bag_name" default="aspen_run0"/>
+  <arg name="bag_file" default="$(env HOME)/ColoRadarDataset/$(arg bag_name).bag"/>
+
+  <include file="$(find radar_experiments)/launch/mapping/aloam.launch">
+    <arg name="bag_file" value="$(arg bag_file)"/>
+  </include>
+
+  <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
+      args="10 radar_experiments octomap_server.launch resolution:=$(arg resolution_octomap)"
+      name="octomap_servers" output="screen">
+  </node>
+
+</launch>
