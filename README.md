@@ -1,6 +1,6 @@
-# Localization experiments. Submitted to ICRA 2022
+# Localization experiments. 
 
-This repository contains the source code and additional configuration files to reproduce the results of our work submitted to ICRA2022:
+This repository contains the source code and additional configuration files to reproduce the results of our work submitted to Robot 2022:
 
 D. Alejo, R. Rey, J. A. Cobano, F. Caballero and L. Merino, "Data  fusion  of  low-cost  RADAR  and  LIDAR  for  reliable  ground  robotlocalization  under  low-visibility  conditions"
 
