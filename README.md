@@ -1,8 +1,8 @@
 # Localization experiments. 
 
-This repository contains the source code and additional configuration files to reproduce the results of our work submitted to Robot 2022:
+This repository contains the source code and additional configuration files to reproduce the results of our work presented in the Robot 2022 international conference:
 
-D. Alejo, R. Rey, J. A. Cobano, F. Caballero and L. Merino, "Data  fusion  of  low-cost  RADAR  and  LIDAR  for  reliable  ground  robotlocalization  under  low-visibility  conditions"
+D. Alejo, R. Rey, J. A. Cobano, F. Caballero and L. Merino, ["Data  fusion  of  low-cost  RADAR  and  LIDAR  for  reliable  ground  robotlocalization  under  low-visibility  conditions"](https://www.springerprofessional.de/en/data-fusion-of-radar-and-lidar-for-robot-localization-under-low-/23728624). In D. Tardioli, V. Matellan, G. Heredia, M.F. Silva, and L. Marques, editors, ROBOT2022: Fifth Iberian Robotics Conference, Advances in Intelligent Systems and Computing, pp. 301–313, Springer International Publishing, 2023.
 
 In this paper, we have designed and implemented a new method for fusing radar and lidar information. The method has been implemented mainly in the source file: src/sensor_fusion/lidar_radar_fusion_dbscan.cpp
 
