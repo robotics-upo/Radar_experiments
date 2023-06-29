@@ -49,7 +49,7 @@ Related to node:
 - sychronization_margin
 - time_tolerance
 
-Acknowledgements
+## Acknowledgements
 
 This work is partially supported by Programa Operativo FEDER Andalucia 2014-2020, Consejeria de Economía, Conocimiento y Universidades (DeepBot, PY20_00817) and the Insertion project, funded by MCIN with grant number PID2021-127648OB-C31.
 
