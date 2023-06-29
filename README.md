@@ -48,3 +48,9 @@ Related to node:
 
 - sychronization_margin
 - time_tolerance
+
+Acknowledgements
+
+This work is partially supported by Programa Operativo FEDER Andalucia 2014-2020, Consejeria de Economía, Conocimiento y Universidades (DeepBot, PY20_00817) and the project NHoA PLEC2021-007868, funded by MCIN/AEI/10.13039/501100011033 and the European Union NextGenerationEU/PRTR.
+
+<img src="images/mci_logo.png" width="400">
