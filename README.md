@@ -54,3 +54,4 @@ Related to node:
 This work is partially supported by Programa Operativo FEDER Andalucia 2014-2020, Consejeria de Economía, Conocimiento y Universidades (DeepBot, PY20_00817) and by the Spanish Ministry of Science, Innovation and Universities (Insertion PID2021-127648OB-C31, MCIU/AEI/FEDER, UE).
 
 <img src="images/mci_logo.png" width="400">
+<img src="images/junta_logo.png" width="400">
